@@ -1,0 +1,23 @@
+{
+  "inferno": {
+    "id": "inferno",
+    "title": "Inferno",
+    "title_zh": "地狱篇",
+    "canto_count": 34,
+    "translator": "Henry Wadsworth Longfellow (1867)"
+  },
+  "purgatorio": {
+    "id": "purgatorio",
+    "title": "Purgatorio",
+    "title_zh": "炼狱篇",
+    "canto_count": 33,
+    "translator": "Henry Wadsworth Longfellow (1867)"
+  },
+  "paradiso": {
+    "id": "paradiso",
+    "title": "Paradiso",
+    "title_zh": "天堂篇",
+    "canto_count": 33,
+    "translator": "Henry Wadsworth Longfellow (1867)"
+  }
+}
