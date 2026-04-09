@@ -16,9 +16,22 @@ interface Props {
 export default function CantoContent({ canto, cantoEn, book_title, book_title_zh, lang, translator }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
-  // 'zh' = Chinese first (default), 'en' = English first
   const [biOrder, setBiOrder] = useState<'zh' | 'en'>('zh');
   const [immersive, setImmersive] = useState(false);
+  const [fontSize, setFontSize] = useState(16);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('fontSize');
+    if (saved) setFontSize(Number(saved));
+  }, []);
+
+  function adjustFont(delta: number) {
+    setFontSize(prev => {
+      const next = Math.min(26, Math.max(12, prev + delta));
+      localStorage.setItem('fontSize', String(next));
+      return next;
+    });
+  }
 
   const isBilingual = lang === 'bilingual' && cantoEn;
 
@@ -111,6 +124,28 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
               {biOrder === 'zh' ? '中↑英↓' : '英↑中↓'}
             </button>
           )}
+          {/* Font size controls */}
+          <div className="flex items-center rounded overflow-hidden" style={{ border: '1px solid var(--border-light)' }}>
+            <button
+              onClick={() => adjustFont(-1)}
+              className="flex items-center justify-center w-6 h-6 text-sm"
+              style={{ background: 'var(--bg-active)', color: 'var(--text-secondary)' }}
+              title="减小字号"
+            >
+              A
+            </button>
+            <span className="text-xs px-1.5 select-none" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)', minWidth: '2rem', textAlign: 'center', lineHeight: '1.5rem' }}>
+              {fontSize}
+            </span>
+            <button
+              onClick={() => adjustFont(1)}
+              className="flex items-center justify-center w-6 h-6"
+              style={{ background: 'var(--bg-active)', color: 'var(--text-secondary)', fontSize: '1rem' }}
+              title="增大字号"
+            >
+              A
+            </button>
+          </div>
           <span className="text-xs hidden sm:inline" style={{ color: 'var(--text-muted)' }}>
             {canto.lines.filter(l => l.trim()).length}{lang === 'en' ? ' lines' : ' 行'}
           </span>
@@ -161,7 +196,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
         className="flex-1 overflow-y-auto fade-in canto-scroll"
         onScroll={handleScroll}
       >
-        <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '680px', margin: '0 auto', fontSize: `${fontSize}px` }}>
           {isBilingual ? (
             (() => {
               const len = Math.max(canto.lines.length, cantoEn!.lines.length);
@@ -184,7 +219,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
                             color: 'var(--text-primary)',
                             marginBottom: '0.05em',
                             fontFamily: 'Georgia, Palatino Linotype, serif',
-                            fontSize: firstIsEn ? '0.9rem' : '1rem',
+                            fontSize: firstIsEn ? '0.9em' : '1em',
                             lineHeight: '1.75',
                             letterSpacing: firstIsEn ? '0.01em' : '0.02em',
                             paddingLeft: (firstIsEn && (en.startsWith('  ') || en.startsWith('\u2003'))) ? '1.5em' : '0',
@@ -199,7 +234,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
                           style={{
                             color: 'var(--text-muted)',
                             fontFamily: 'Georgia, Palatino Linotype, serif',
-                            fontSize: firstIsEn ? '1rem' : '0.875rem',
+                            fontSize: firstIsEn ? '1em' : '0.875em',
                             lineHeight: '1.65',
                             letterSpacing: firstIsEn ? '0.02em' : '0.01em',
                             paddingLeft: (!firstIsEn && (en.startsWith('  ') || en.startsWith('\u2003'))) ? '1.5em' : '0',
@@ -223,12 +258,13 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
               return (
                 <p
                   key={idx}
-                  className="text-base leading-relaxed select-text"
+                  className="leading-relaxed select-text"
                   style={{
                     color: 'var(--text-primary)',
                     paddingLeft: isIndented ? '1.5em' : '0',
                     marginBottom: '0.1em',
                     fontFamily: 'Georgia, Palatino Linotype, serif',
+                    fontSize: '1em',
                     lineHeight: '1.85',
                     letterSpacing: lang === 'zh' ? '0.02em' : '0.01em',
                   }}
