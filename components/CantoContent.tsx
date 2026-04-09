@@ -79,7 +79,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
     <div className="flex flex-col h-full">
       {/* Canto header */}
       <div
-        className="flex items-center justify-between px-4 py-3 md:px-8 md:py-4 shrink-0"
+        className="canto-header flex items-center justify-between px-4 py-3 md:px-8 md:py-4 shrink-0"
         style={{ borderBottom: '1px solid var(--border)' }}
       >
         <div>

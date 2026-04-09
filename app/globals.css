@@ -54,12 +54,19 @@ body {
   }
 }
 
-/* ── Auto-hide topbar on scroll down ── */
-.topbar {
-  transition: transform 0.25s ease, opacity 0.25s ease;
+/* ── Auto-hide bars on scroll down ── */
+.topbar,
+.canto-header {
+  overflow: hidden;
+  max-height: 80px;
+  transition: max-height 0.3s ease, opacity 0.2s ease,
+              padding-top 0.3s ease, padding-bottom 0.3s ease;
 }
-body.scroll-down .topbar {
-  transform: translateY(-100%);
+body.scroll-down .topbar,
+body.scroll-down .canto-header {
+  max-height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
   opacity: 0;
   pointer-events: none;
 }
