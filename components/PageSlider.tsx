@@ -59,6 +59,8 @@ export default function PageSlider({
 
       if (direction.current === 'h') {
         e.preventDefault();
+        // Restore headers so both panels look the same during swipe
+        document.body.classList.remove('scroll-down');
         let clamped = dx;
         if (dx > 0 && !prevHref) clamped = Math.min(dx * 0.15, 30);
         if (dx < 0 && !nextHref) clamped = Math.max(dx * 0.15, -30);
@@ -132,9 +134,9 @@ function AdjacentPane({ canto, lang, fontSize, bookTitle, bookTitleZh }: {
 }) {
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg)' }}>
-      {/* Header — matches CantoContent's canto-header style */}
+      {/* Header — same class as CantoContent so scroll-hide applies equally */}
       <div
-        className="flex items-center justify-between px-4 py-3 md:px-8 md:py-4 shrink-0"
+        className="canto-header flex items-center justify-between px-4 py-3 md:px-8 md:py-4 shrink-0"
         style={{ borderBottom: '1px solid var(--border)' }}
       >
         <div>
