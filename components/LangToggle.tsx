@@ -3,15 +3,27 @@
 import { useRouter, usePathname } from 'next/navigation';
 import type { Lang } from '@/lib/types';
 
+const CYCLE: Lang[] = ['en', 'zh', 'bilingual'];
+
+const LABELS: Record<Lang, string> = {
+  en: 'EN',
+  zh: '中文',
+  bilingual: '双语',
+};
+
+const TITLES: Record<Lang, string> = {
+  en: '切换为中文',
+  zh: '切换为双语对照',
+  bilingual: 'Switch to English',
+};
+
 export default function LangToggle({ current }: { current: Lang }) {
   const router = useRouter();
   const pathname = usePathname();
 
   function toggle() {
-    const next: Lang = current === 'en' ? 'zh' : 'en';
-    // Swap lang param in URL: /read/book/canto?lang=X
-    const url = new URL(pathname, 'http://x');
-    url.searchParams.set('lang', next);
+    const idx = CYCLE.indexOf(current);
+    const next: Lang = CYCLE[(idx + 1) % CYCLE.length];
     router.push(`${pathname}?lang=${next}`);
   }
 
@@ -24,11 +36,16 @@ export default function LangToggle({ current }: { current: Lang }) {
         color: 'var(--text-primary)',
         border: '1px solid var(--border-light)',
       }}
-      title={current === 'en' ? '切换为中文' : 'Switch to English'}
+      title={TITLES[current]}
     >
-      <span style={{ color: current === 'en' ? 'var(--accent)' : 'var(--text-muted)' }}>EN</span>
-      <span style={{ color: 'var(--text-muted)' }}>/</span>
-      <span style={{ color: current === 'zh' ? 'var(--accent)' : 'var(--text-muted)' }}>中文</span>
+      {CYCLE.map((lang, i) => (
+        <span key={lang}>
+          {i > 0 && <span style={{ color: 'var(--text-muted)', margin: '0 2px' }}>/</span>}
+          <span style={{ color: current === lang ? 'var(--accent)' : 'var(--text-muted)' }}>
+            {LABELS[lang]}
+          </span>
+        </span>
+      ))}
     </button>
   );
 }

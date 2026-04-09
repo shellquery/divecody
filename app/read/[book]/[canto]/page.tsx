@@ -38,22 +38,30 @@ export default async function ReadPage({
 
   const bookId = book as BookId;
   const cantoNum = parseInt(cantoStr, 10);
-  const lang: Lang = langParam === 'en' ? 'en' : 'zh';
+  const lang: Lang =
+    langParam === 'en' ? 'en' :
+    langParam === 'bilingual' ? 'bilingual' :
+    'zh';
 
   if (!BOOKS.find((b) => b.id === bookId)) notFound();
   const maxCanto = CANTO_COUNTS[bookId];
   if (isNaN(cantoNum) || cantoNum < 1 || cantoNum > maxCanto) notFound();
 
   // If Chinese is requested but only placeholder exists, flag it and show English
-  const zhIsPlaceholder = lang === 'zh' && isZhPlaceholder(bookId);
+  const zhIsPlaceholder = (lang === 'zh' || lang === 'bilingual') && isZhPlaceholder(bookId);
 
-  const canto = getCanto(bookId, cantoNum, zhIsPlaceholder ? 'en' : lang)
-             ?? getCanto(bookId, cantoNum, 'en');
+  const cantoEn = getCanto(bookId, cantoNum, 'en');
+  const cantoZh = getCanto(bookId, cantoNum, 'zh') ?? cantoEn;
   const meta = getBookMeta(bookId, 'en');
 
-  if (!canto || !meta) notFound();
+  const canto =
+    lang === 'en' ? cantoEn :
+    lang === 'bilingual' ? cantoZh :
+    (zhIsPlaceholder ? cantoEn : cantoZh);
 
-  const effectiveLang: Lang = zhIsPlaceholder ? 'en' : lang;
+  if (!canto || !meta || !cantoEn) notFound();
+
+  const effectiveLang: Lang = zhIsPlaceholder && lang === 'zh' ? 'en' : lang;
   const prevCanto = cantoNum > 1 ? cantoNum - 1 : null;
   const nextCanto = cantoNum < maxCanto ? cantoNum + 1 : null;
 
@@ -75,7 +83,7 @@ export default async function ReadPage({
             </h1>
             <span style={{ color: 'var(--border-light)' }}>|</span>
             <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              {lang === 'zh' ? '但丁 · 阿利吉耶里' : 'Dante Alighieri'}
+              {lang === 'en' ? 'Dante Alighieri' : '但丁 · 阿利吉耶里'}
             </span>
           </div>
 
@@ -133,13 +141,16 @@ export default async function ReadPage({
         {/* Reading area */}
         <div className="flex-1 min-h-0">
           <CantoContent
-            canto={canto}
+            canto={canto!}
+            cantoEn={effectiveLang === 'bilingual' ? cantoEn! : undefined}
             book_title={meta.title}
             book_title_zh={meta.title_zh}
             lang={effectiveLang}
             translator={
               effectiveLang === 'en'
                 ? 'Henry Wadsworth Longfellow (1867) · 英文版'
+                : effectiveLang === 'bilingual'
+                ? `${meta.translator}  ·  Henry Wadsworth Longfellow (1867)`
                 : meta.translator
             }
           />

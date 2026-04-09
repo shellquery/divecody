@@ -1,5 +1,5 @@
 export type BookId = 'inferno' | 'purgatorio' | 'paradiso';
-export type Lang = 'en' | 'zh';
+export type Lang = 'en' | 'zh' | 'bilingual';
 
 export interface Canto {
   number: number;
