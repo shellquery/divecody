@@ -8,14 +8,10 @@ import Sidebar from '@/components/Sidebar';
 import LangToggle from '@/components/LangToggle';
 import CantoContent from '@/components/CantoContent';
 import ThemeToggle from '@/components/ThemeToggle';
+import PageSlider from '@/components/PageSlider';
 
-interface Params {
-  book: string;
-  canto: string;
-}
-interface SearchParams {
-  lang?: string;
-}
+interface Params { book: string; canto: string }
+interface SearchParams { lang?: string }
 
 export function generateStaticParams() {
   const params = [];
@@ -49,10 +45,14 @@ export default async function ReadPage({
   if (isNaN(cantoNum) || cantoNum < 1 || cantoNum > maxCanto) notFound();
 
   const zhIsPlaceholder = (lang === 'zh' || lang === 'bilingual') && isZhPlaceholder(bookId);
+  const effectiveLang: Lang = zhIsPlaceholder && lang === 'zh' ? 'en' : lang;
 
-  const cantoEn = getCanto(bookId, cantoNum, 'en');
-  const cantoZh = getCanto(bookId, cantoNum, 'zh') ?? cantoEn;
-  const meta = getBookMeta(bookId, 'en');
+  // Primary display language for adjacent panes (bilingual → zh)
+  const adjLang: 'en' | 'zh' = effectiveLang === 'en' ? 'en' : 'zh';
+
+  const cantoEn  = getCanto(bookId, cantoNum, 'en');
+  const cantoZh  = getCanto(bookId, cantoNum, 'zh') ?? cantoEn;
+  const meta     = getBookMeta(bookId, 'en');
 
   const canto =
     lang === 'en' ? cantoEn :
@@ -61,12 +61,14 @@ export default async function ReadPage({
 
   if (!canto || !meta || !cantoEn) notFound();
 
-  const effectiveLang: Lang = zhIsPlaceholder && lang === 'zh' ? 'en' : lang;
-  const prevCanto = cantoNum > 1 ? cantoNum - 1 : null;
-  const nextCanto = cantoNum < maxCanto ? cantoNum + 1 : null;
+  // Adjacent cantos for swipe preview
+  const prevNum = cantoNum > 1 ? cantoNum - 1 : null;
+  const nextNum = cantoNum < maxCanto ? cantoNum + 1 : null;
+  const prevCanto = prevNum ? (getCanto(bookId, prevNum, adjLang) ?? getCanto(bookId, prevNum, 'en') ?? undefined) : undefined;
+  const nextCanto = nextNum ? (getCanto(bookId, nextNum, adjLang) ?? getCanto(bookId, nextNum, 'en') ?? undefined) : undefined;
 
-  const prevHref = prevCanto ? `/read/${bookId}/${prevCanto}?lang=${lang}` : '#';
-  const nextHref = nextCanto ? `/read/${bookId}/${nextCanto}?lang=${lang}` : '#';
+  const prevHref = prevNum ? `/read/${bookId}/${prevNum}?lang=${lang}` : undefined;
+  const nextHref = nextNum ? `/read/${bookId}/${nextNum}?lang=${lang}` : undefined;
 
   return (
     <div className="flex h-full" style={{ background: 'var(--bg)' }}>
@@ -75,19 +77,14 @@ export default async function ReadPage({
       </Suspense>
 
       <div className="flex flex-col flex-1 min-w-0 h-full">
-        {/* Top bar — "topbar" class used by immersive mode CSS */}
+        {/* Top bar */}
         <header
           className="topbar flex items-center justify-between pl-12 pr-3 py-2.5 md:px-6 md:py-3 shrink-0"
           style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}
         >
-          {/* Left: title (author hidden on mobile) */}
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <h1
-              className="text-sm md:text-base font-medium tracking-wide truncate"
-              style={{ color: 'var(--accent)' }}
-            >
-              神曲
-              <span className="hidden sm:inline"> · Divine Comedy</span>
+            <h1 className="text-sm md:text-base font-medium tracking-wide truncate" style={{ color: 'var(--accent)' }}>
+              神曲<span className="hidden sm:inline"> · Divine Comedy</span>
             </h1>
             <span className="hidden md:inline" style={{ color: 'var(--border-light)' }}>|</span>
             <span className="hidden md:inline text-sm" style={{ color: 'var(--text-secondary)' }}>
@@ -95,62 +92,45 @@ export default async function ReadPage({
             </span>
           </div>
 
-          {/* Right: controls */}
           <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
             {zhIsPlaceholder && (
-              <span
-                className="hidden sm:inline text-xs px-2 py-0.5 rounded-full"
-                style={{
-                  background: 'rgba(196,163,90,0.12)',
-                  color: 'var(--accent)',
-                  border: '1px solid var(--accent-dim)',
-                }}
-              >
+              <span className="hidden sm:inline text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(196,163,90,0.12)', color: 'var(--accent)', border: '1px solid var(--accent-dim)' }}>
                 翻译生成中…
               </span>
             )}
-
-            {/* Prev / Next */}
             <div className="flex gap-1">
               <Link
-                href={prevHref}
-                aria-disabled={!prevCanto}
+                href={prevHref ?? '#'}
+                aria-disabled={!prevNum}
                 className="px-2 py-1.5 md:px-3 rounded text-xs md:text-sm transition-colors"
-                style={{
-                  background: prevCanto ? 'var(--bg-active)' : 'var(--bg-hover)',
-                  color: prevCanto ? 'var(--text-secondary)' : 'var(--text-muted)',
-                  border: '1px solid var(--border-light)',
-                  pointerEvents: prevCanto ? 'auto' : 'none',
-                  opacity: prevCanto ? 1 : 0.35,
-                }}
+                style={{ background: prevNum ? 'var(--bg-active)' : 'var(--bg-hover)', color: prevNum ? 'var(--text-secondary)' : 'var(--text-muted)', border: '1px solid var(--border-light)', pointerEvents: prevNum ? 'auto' : 'none', opacity: prevNum ? 1 : 0.35 }}
               >
                 <span className="inline md:hidden">‹</span>
                 <span className="hidden md:inline">← {lang === 'zh' ? '上章' : 'Prev'}</span>
               </Link>
               <Link
-                href={nextHref}
-                aria-disabled={!nextCanto}
+                href={nextHref ?? '#'}
+                aria-disabled={!nextNum}
                 className="px-2 py-1.5 md:px-3 rounded text-xs md:text-sm transition-colors"
-                style={{
-                  background: nextCanto ? 'var(--bg-active)' : 'var(--bg-hover)',
-                  color: nextCanto ? 'var(--text-secondary)' : 'var(--text-muted)',
-                  border: '1px solid var(--border-light)',
-                  pointerEvents: nextCanto ? 'auto' : 'none',
-                  opacity: nextCanto ? 1 : 0.35,
-                }}
+                style={{ background: nextNum ? 'var(--bg-active)' : 'var(--bg-hover)', color: nextNum ? 'var(--text-secondary)' : 'var(--text-muted)', border: '1px solid var(--border-light)', pointerEvents: nextNum ? 'auto' : 'none', opacity: nextNum ? 1 : 0.35 }}
               >
                 <span className="inline md:hidden">›</span>
                 <span className="hidden md:inline">{lang === 'zh' ? '下章' : 'Next'} →</span>
               </Link>
             </div>
-
             <LangToggle current={lang} />
             <ThemeToggle />
           </div>
         </header>
 
-        {/* Reading area */}
-        <div className="flex-1 min-h-0">
+        {/* Reading area — PageSlider handles swipe, wraps CantoContent */}
+        <PageSlider
+          prevCanto={prevCanto}
+          nextCanto={nextCanto}
+          prevHref={prevHref}
+          nextHref={nextHref}
+          lang={adjLang}
+        >
           <CantoContent
             canto={canto!}
             cantoEn={effectiveLang === 'bilingual' ? cantoEn! : undefined}
@@ -164,10 +144,8 @@ export default async function ReadPage({
                 ? `${meta.translator}  ·  Henry Wadsworth Longfellow (1867)`
                 : meta.translator
             }
-            prevHref={prevCanto ? prevHref : undefined}
-            nextHref={nextCanto ? nextHref : undefined}
           />
-        </div>
+        </PageSlider>
       </div>
     </div>
   );
