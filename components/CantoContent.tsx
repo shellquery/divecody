@@ -21,19 +21,35 @@ const VERSE_STYLE: React.CSSProperties = {
   marginBottom: 0,
 };
 
+// Negative margin equal to width lets numbers float into the left padding
+// so they don't reduce the reading area at all.
+const NUM_W = '1.25rem';
 const NUM_STYLE: React.CSSProperties = {
   display: 'inline-block',
-  width: '2.5rem',
+  width: NUM_W,
   textAlign: 'right',
-  paddingRight: '0.625rem',
+  paddingRight: '0.2rem',
   color: 'var(--text-muted)',
-  fontSize: '0.65em',
+  fontSize: '0.6em',
   fontFamily: 'ui-monospace, monospace',
   userSelect: 'none',
   cursor: 'pointer',
   flexShrink: 0,
-  lineHeight: (1.85 / 0.65).toFixed(4),
+  lineHeight: (1.85 / 0.6).toFixed(4),
+  opacity: 0.7,
 };
+
+// Swap icon for bilingual order toggle
+function SwapIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="7 16 7 4" />
+      <polyline points="3 8 7 4 11 8" />
+      <polyline points="17 8 17 20" />
+      <polyline points="21 16 17 20 13 16" />
+    </svg>
+  );
+}
 
 export default function CantoContent({ canto, cantoEn, book_title, book_title_zh, lang, translator }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -144,7 +160,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
       }
     }
 
-    const text = parts.join('\n').trimEnd() + `\n\n— ${translator}\n${url}`;
+    const text = parts.join('\n').trimEnd() + `\n\n${url}`;
     navigator.clipboard.writeText(text).catch(() => {
       const ta = document.createElement('textarea');
       ta.value = text;
@@ -176,6 +192,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
             display: 'flex',
             alignItems: 'baseline',
             marginBottom: '0.1em',
+            marginLeft: `-${NUM_W}`,
             borderRadius: '3px',
             background: selected ? 'rgba(196,163,90,0.1)' : 'transparent',
           }}
@@ -231,6 +248,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
             display: 'flex',
             alignItems: 'flex-start',
             marginBottom: '0.75em',
+            marginLeft: `-${NUM_W}`,
             borderRadius: '3px',
             background: selected ? 'rgba(196,163,90,0.1)' : 'transparent',
           }}
@@ -306,11 +324,11 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
           {isBilingual && (
             <button
               onClick={() => setBiOrder(o => o === 'zh' ? 'en' : 'zh')}
-              className="px-2 py-1 rounded text-xs"
+              className="flex items-center justify-center w-7 h-7 rounded"
               style={{ background: 'var(--bg-active)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}
-              title="切换中英顺序"
+              title={biOrder === 'zh' ? '中↑英↓ · 点击切换' : '英↑中↓ · 点击切换'}
             >
-              {biOrder === 'zh' ? '中↑英↓' : '英↑中↓'}
+              <SwapIcon />
             </button>
           )}
           <div className="flex items-center rounded overflow-hidden" style={{ border: '1px solid var(--border-light)' }}>
@@ -329,7 +347,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
           >
             {immersive ? '⊡' : '⊞'}
           </button>
-          <CopyButton getText={getTextToCopy} label={copyLabel} copiedLabel={copiedLabel} />
+          <CopyButton getText={getTextToCopy} label={copyLabel} copiedLabel={copiedLabel} iconOnly />
         </div>
       </div>
 
