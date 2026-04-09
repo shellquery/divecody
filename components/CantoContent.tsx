@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import CopyButton from './CopyButton';
 import type { Canto, Lang } from '@/lib/types';
 
@@ -11,11 +12,16 @@ interface Props {
   book_title_zh: string;
   lang: Lang;
   translator: string;
+  prevHref?: string;
+  nextHref?: string;
 }
 
-export default function CantoContent({ canto, cantoEn, book_title, book_title_zh, lang, translator }: Props) {
+export default function CantoContent({ canto, cantoEn, book_title, book_title_zh, lang, translator, prevHref, nextHref }: Props) {
+  const router = useRouter();
   const contentRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
   const [biOrder, setBiOrder] = useState<'zh' | 'en'>('zh');
   const [immersive, setImmersive] = useState(false);
   const [fontSize, setFontSize] = useState(16);
@@ -48,6 +54,20 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
   useEffect(() => {
     return () => { document.body.classList.remove('scroll-down'); };
   }, []);
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    // Only fire if horizontal dominates and exceeds 60px
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (dx > 0 && prevHref) router.push(prevHref);   // swipe right → prev
+    if (dx < 0 && nextHref) router.push(nextHref);   // swipe left  → next
+  }
 
   function handleScroll(e: React.UIEvent<HTMLDivElement>) {
     const current = e.currentTarget.scrollTop;
@@ -195,6 +215,8 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
         ref={contentRef}
         className="flex-1 overflow-y-auto fade-in canto-scroll"
         onScroll={handleScroll}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <div style={{ maxWidth: '680px', margin: '0 auto', fontSize: `${fontSize}px` }}>
           {isBilingual ? (

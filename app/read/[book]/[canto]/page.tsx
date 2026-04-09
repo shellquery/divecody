@@ -164,6 +164,8 @@ export default async function ReadPage({
                 ? `${meta.translator}  ·  Henry Wadsworth Longfellow (1867)`
                 : meta.translator
             }
+            prevHref={prevCanto ? prevHref : undefined}
+            nextHref={nextCanto ? nextHref : undefined}
           />
         </div>
       </div>
