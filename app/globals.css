@@ -71,7 +71,8 @@ body.scroll-down .sidebar-header {
   opacity: 0;
   pointer-events: none;
 }
-body.scroll-down .sidebar-reopen {
+body.scroll-down .sidebar-reopen,
+body.scroll-down .mobile-menu-btn {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;

@@ -153,7 +153,7 @@ export default function Sidebar() {
 
       {/* Mobile: hamburger button */}
       <button
-        className="md:hidden fixed top-2.5 left-3 z-50 flex items-center justify-center w-9 h-9 rounded"
+        className="mobile-menu-btn md:hidden fixed top-2.5 left-3 z-50 flex items-center justify-center w-9 h-9 rounded"
         style={{
           background: 'var(--bg-active)',
           border: '1px solid var(--border-light)',
