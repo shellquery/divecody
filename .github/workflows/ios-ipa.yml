@@ -1,0 +1,88 @@
+name: Build iOS IPA (AltStore)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    name: Build unsigned IPA
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Add iOS platform
+        run: npx cap add ios
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios/App
+        run: pod install
+
+      - name: Build (archive) — no signing
+        working-directory: ios/App
+        run: |
+          xcodebuild archive \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE="" \
+            | xcpretty || true
+          # xcpretty may not be installed; run again without it if the archive is missing
+          if [ ! -d "$RUNNER_TEMP/App.xcarchive" ]; then
+            xcodebuild archive \
+              -workspace App.xcworkspace \
+              -scheme App \
+              -configuration Release \
+              -archivePath "$RUNNER_TEMP/App.xcarchive" \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGN_IDENTITY="" \
+              PROVISIONING_PROFILE=""
+          fi
+
+      - name: Package as IPA
+        run: |
+          APP_PATH=$(find "$RUNNER_TEMP/App.xcarchive/Products" -name "*.app" | head -1)
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -r "$APP_PATH" "$RUNNER_TEMP/ipa/Payload/"
+          cd "$RUNNER_TEMP/ipa"
+          zip -r "$RUNNER_TEMP/divecody.ipa" Payload
+          echo "IPA size: $(du -h "$RUNNER_TEMP/divecody.ipa" | cut -f1)"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: divecody-ipa-${{ github.sha }}
+          path: ${{ runner.temp }}/divecody.ipa
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "## ✅ IPA Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Install via AltStore" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download **divecody.ipa** from the Artifacts section above" >> $GITHUB_STEP_SUMMARY
+          echo "2. Open **AltStore** on your iPhone" >> $GITHUB_STEP_SUMMARY
+          echo "3. Tap **+** → choose the downloaded IPA" >> $GITHUB_STEP_SUMMARY
+          echo "4. AltStore will sign and install the app" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> The IPA is unsigned. AltStore will re-sign it with your Apple ID (free dev certificate, 7-day expiry — refresh weekly via AltStore)." >> $GITHUB_STEP_SUMMARY
