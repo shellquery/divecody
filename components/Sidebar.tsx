@@ -110,7 +110,7 @@ export default function Sidebar() {
       >
         {/* Collapse button */}
         <div
-          className="flex items-center justify-between px-3 py-2 shrink-0"
+          className="sidebar-header flex items-center justify-between px-3 py-2 shrink-0"
           style={{ borderBottom: '1px solid var(--border)' }}
         >
           <span className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
@@ -131,7 +131,7 @@ export default function Sidebar() {
       {/* Desktop re-open button (when collapsed) */}
       {desktopCollapsed && (
         <button
-          className="hidden md:flex fixed left-0 top-1/2 z-30 items-center justify-center"
+          className="sidebar-reopen hidden md:flex fixed left-0 top-1/2 z-30 items-center justify-center"
           style={{
             transform: 'translateY(-50%)',
             width: '18px',

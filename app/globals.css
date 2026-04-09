@@ -63,12 +63,18 @@ body {
               padding-top 0.3s ease, padding-bottom 0.3s ease;
 }
 body.scroll-down .topbar,
-body.scroll-down .canto-header {
+body.scroll-down .canto-header,
+body.scroll-down .sidebar-header {
   max-height: 0 !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   opacity: 0;
   pointer-events: none;
+}
+body.scroll-down .sidebar-reopen {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
 }
 
 /* ── Immersive mode ── */
