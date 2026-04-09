@@ -1,0 +1,87 @@
+name: Build iOS PWA
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Generate icons & build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # prebuild hook in package.json runs gen-icons.mjs automatically,
+      # but we call it explicitly here first so failures surface clearly.
+      - name: Generate PWA icons
+        run: node scripts/gen-icons.mjs
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Validate PWA assets
+        run: |
+          echo "── Checking required PWA files ──"
+          for f in \
+            public/manifest.json \
+            public/icon.svg \
+            public/apple-touch-icon.png \
+            public/icons/icon-192.png \
+            public/icons/icon-512.png \
+            public/icons/icon-maskable-512.png; do
+            if [ -f "$f" ]; then
+              echo "✅  $f"
+            else
+              echo "❌  $f  MISSING"
+              exit 1
+            fi
+          done
+          echo "── manifest.json ──"
+          cat public/manifest.json
+
+      # Upload the complete PWA build as a release artifact.
+      # This artifact can be served from any static host
+      # (GitHub Pages, S3, Cloudflare Pages, …) and installed
+      # on iOS via Safari → Share → Add to Home Screen.
+      - name: Upload PWA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: divine-comedy-pwa-${{ github.sha }}
+          path: |
+            .next/
+            public/
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "## ✅ PWA Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Install on iOS" >> $GITHUB_STEP_SUMMARY
+          echo "1. Open the deployed URL in **Safari** on iPhone/iPad" >> $GITHUB_STEP_SUMMARY
+          echo "2. Tap the **Share** button ↑" >> $GITHUB_STEP_SUMMARY
+          echo "3. Tap **Add to Home Screen**" >> $GITHUB_STEP_SUMMARY
+          echo "4. The app icon and name will appear on your home screen" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| manifest.json | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| apple-touch-icon.png (180×180) | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| icon-192.png | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| icon-512.png | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| icon-maskable-512.png | ✅ |" >> $GITHUB_STEP_SUMMARY

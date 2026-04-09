@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "prebuild": "node scripts/gen-icons.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "gen-icons": "node scripts/gen-icons.mjs",
     "fetch-en": "python3 scripts/parse_english.py",
     "translate-zh": "python3 scripts/translate_to_chinese.py",
     "fetch-zh": "python3 scripts/fetch_chinese.py"
@@ -17,6 +19,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#0f0e0d"/>
+  <!-- Outer flame body -->
+  <path d="M256 72
+    C226 108 188 158 182 210
+    C174 272 198 308 218 332
+    C228 344 244 360 256 390
+    C268 360 284 344 294 332
+    C314 308 338 272 330 210
+    C324 158 286 108 256 72Z"
+    fill="#c4a35a"/>
+  <!-- Mid flame (lighter gold) -->
+  <path d="M256 140
+    C240 168 228 200 228 234
+    C228 268 242 290 256 320
+    C270 290 284 268 284 234
+    C284 200 272 168 256 140Z"
+    fill="#e8c97a"/>
+  <!-- Inner dark cutout -->
+  <path d="M256 210
+    C246 228 242 250 256 278
+    C270 250 266 228 256 210Z"
+    fill="#1a1815"/>
+  <!-- Glow dot at tip -->
+  <circle cx="256" cy="82" r="10" fill="#f5e8b0" opacity="0.9"/>
+</svg>
