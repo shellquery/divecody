@@ -11,10 +11,12 @@ interface Props {
   prevHref?: string;
   nextHref?: string;
   lang: Lang;
+  bookTitle: string;
+  bookTitleZh: string;
 }
 
 export default function PageSlider({
-  children, prevCanto, nextCanto, prevHref, nextHref, lang,
+  children, prevCanto, nextCanto, prevHref, nextHref, lang, bookTitle, bookTitleZh,
 }: Props) {
   const router = useRouter();
   const [fontSize, setFontSize] = useState(16);
@@ -22,6 +24,7 @@ export default function PageSlider({
     const saved = localStorage.getItem('fontSize');
     if (saved) setFontSize(Number(saved));
   }, []);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const startX = useRef(0);
@@ -34,7 +37,6 @@ export default function PageSlider({
     const el = containerRef.current;
     const track = trackRef.current;
     if (!el || !track) return;
-    // Keep typed local refs for closures
     const _el: HTMLDivElement = el;
 
     function onTouchStart(e: TouchEvent) {
@@ -95,6 +97,8 @@ export default function PageSlider({
     };
   }, [prevHref, nextHref, router]);
 
+  const paneProps = { lang, fontSize, bookTitle, bookTitleZh };
+
   return (
     <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden">
       <div
@@ -105,7 +109,7 @@ export default function PageSlider({
         {/* Prev panel */}
         <div className="h-full overflow-hidden" style={{ width: '33.3333%' }}>
           {prevCanto
-            ? <AdjacentPane canto={prevCanto} lang={lang} fontSize={fontSize} />
+            ? <AdjacentPane canto={prevCanto} {...paneProps} />
             : <div style={{ background: 'var(--bg)', width: '100%', height: '100%' }} />}
         </div>
         {/* Current panel */}
@@ -115,7 +119,7 @@ export default function PageSlider({
         {/* Next panel */}
         <div className="h-full overflow-hidden" style={{ width: '33.3333%' }}>
           {nextCanto
-            ? <AdjacentPane canto={nextCanto} lang={lang} fontSize={fontSize} />
+            ? <AdjacentPane canto={nextCanto} {...paneProps} />
             : <div style={{ background: 'var(--bg)', width: '100%', height: '100%' }} />}
         </div>
       </div>
@@ -123,37 +127,51 @@ export default function PageSlider({
   );
 }
 
-function AdjacentPane({ canto, lang, fontSize }: { canto: Canto; lang: Lang; fontSize: number }) {
+function AdjacentPane({ canto, lang, fontSize, bookTitle, bookTitleZh }: {
+  canto: Canto; lang: Lang; fontSize: number; bookTitle: string; bookTitleZh: string;
+}) {
   return (
-    <div
-      className="h-full overflow-y-auto canto-scroll"
-      style={{ background: 'var(--bg)', fontSize: `${fontSize}px` }}
-    >
-      <div style={{ maxWidth: '680px', margin: '0 auto' }}>
-        <p
-          className="text-xs uppercase tracking-widest mb-6"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          {lang === 'en' ? `Canto ${canto.roman}` : canto.title}
-        </p>
-        {canto.lines.map((line, idx) => {
-          if (!line.trim()) return <div key={idx} style={{ height: '0.75em' }} />;
-          return (
-            <p
-              key={idx}
-              style={{
-                color: 'var(--text-primary)',
-                marginBottom: '0.1em',
-                fontFamily: 'Georgia, Palatino Linotype, serif',
-                fontSize: '1em',
-                lineHeight: '1.85',
-                letterSpacing: lang === 'zh' ? '0.02em' : '0.01em',
-              }}
-            >
-              {line.trim()}
-            </p>
-          );
-        })}
+    <div className="flex flex-col h-full" style={{ background: 'var(--bg)' }}>
+      {/* Header — matches CantoContent's canto-header style */}
+      <div
+        className="flex items-center justify-between px-4 py-3 md:px-8 md:py-4 shrink-0"
+        style={{ borderBottom: '1px solid var(--border)' }}
+      >
+        <div>
+          <p className="text-xs uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>
+            {lang === 'en' ? bookTitle : bookTitleZh}
+          </p>
+          <h2 className="text-lg md:text-xl font-medium" style={{ color: 'var(--text-primary)' }}>
+            {lang === 'en' ? `Canto ${canto.roman}` : canto.title}
+          </h2>
+        </div>
+      </div>
+
+      {/* Text */}
+      <div
+        className="flex-1 overflow-y-auto canto-scroll"
+        style={{ fontSize: `${fontSize}px` }}
+      >
+        <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+          {canto.lines.map((line, idx) => {
+            if (!line.trim()) return <div key={idx} style={{ height: '0.75em' }} />;
+            return (
+              <p
+                key={idx}
+                style={{
+                  color: 'var(--text-primary)',
+                  marginBottom: '0.1em',
+                  fontFamily: 'Georgia, Palatino Linotype, serif',
+                  fontSize: '1em',
+                  lineHeight: '1.85',
+                  letterSpacing: lang === 'zh' ? '0.02em' : '0.01em',
+                }}
+              >
+                {line.trim()}
+              </p>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

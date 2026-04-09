@@ -130,6 +130,8 @@ export default async function ReadPage({
           prevHref={prevHref}
           nextHref={nextHref}
           lang={adjLang}
+          bookTitle={meta.title}
+          bookTitleZh={meta.title_zh}
         >
           <CantoContent
             canto={canto!}
