@@ -13,12 +13,36 @@ interface Props {
   translator: string;
 }
 
+const VERSE_STYLE: React.CSSProperties = {
+  color: 'var(--text-primary)',
+  fontFamily: 'Georgia, Palatino Linotype, serif',
+  fontSize: '1em',
+  lineHeight: '1.85',
+  marginBottom: 0,
+};
+
+const NUM_STYLE: React.CSSProperties = {
+  display: 'inline-block',
+  width: '2.5rem',
+  textAlign: 'right',
+  paddingRight: '0.625rem',
+  color: 'var(--text-muted)',
+  fontSize: '0.65em',
+  fontFamily: 'ui-monospace, monospace',
+  userSelect: 'none',
+  cursor: 'pointer',
+  flexShrink: 0,
+  lineHeight: (1.85 / 0.65).toFixed(4),
+};
+
 export default function CantoContent({ canto, cantoEn, book_title, book_title_zh, lang, translator }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
   const [biOrder, setBiOrder] = useState<'zh' | 'en'>('zh');
   const [immersive, setImmersive] = useState(false);
   const [fontSize, setFontSize] = useState(16);
+  const [selectedLines, setSelectedLines] = useState<Set<number>>(new Set());
+  const lastClickRef = useRef<number | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('fontSize');
@@ -36,11 +60,8 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
   const isBilingual = lang === 'bilingual' && cantoEn;
 
   useEffect(() => {
-    if (immersive) {
-      document.body.classList.add('immersive');
-    } else {
-      document.body.classList.remove('immersive');
-    }
+    if (immersive) document.body.classList.add('immersive');
+    else document.body.classList.remove('immersive');
     return () => { document.body.classList.remove('immersive'); };
   }, [immersive]);
 
@@ -51,17 +72,34 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
   function handleScroll(e: React.UIEvent<HTMLDivElement>) {
     const current = e.currentTarget.scrollTop;
     const delta = current - lastScrollY.current;
-    if (current <= 20) {
-      document.body.classList.remove('scroll-down');
-    } else if (delta > 6) {
-      document.body.classList.add('scroll-down');
-    } else if (delta < -6) {
-      document.body.classList.remove('scroll-down');
-    }
+    if (current <= 20) document.body.classList.remove('scroll-down');
+    else if (delta > 6) document.body.classList.add('scroll-down');
+    else if (delta < -6) document.body.classList.remove('scroll-down');
     lastScrollY.current = current;
   }
 
+  function toggleLine(idx: number, shiftKey: boolean) {
+    setSelectedLines(prev => {
+      const next = new Set(prev);
+      if (shiftKey && lastClickRef.current !== null) {
+        const a = Math.min(lastClickRef.current, idx);
+        const b = Math.max(lastClickRef.current, idx);
+        for (let i = a; i <= b; i++) next.add(i);
+      } else {
+        if (next.has(idx)) next.delete(idx);
+        else next.add(idx);
+        lastClickRef.current = idx;
+      }
+      return next;
+    });
+  }
+
+  function getUrl() {
+    return typeof window !== 'undefined' ? window.location.href : '';
+  }
+
   function getTextToCopy() {
+    const url = getUrl();
     if (isBilingual) {
       const header = `但丁《神曲·${book_title_zh}》${canto.title} / ${book_title} Canto ${canto.roman}\n\n`;
       const lines: string[] = [];
@@ -75,13 +113,173 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
         if (first.trim()) lines.push(first.trim());
         if (second.trim()) lines.push(second.trim());
       }
-      return header + lines.join('\n') + `\n\n— ${translator}`;
+      return header + lines.join('\n') + `\n\n— ${translator}\n${url}`;
     }
     const bookLabel = lang === 'zh' ? book_title_zh : book_title;
     const title = lang === 'zh'
       ? `但丁《神曲·${bookLabel}》${canto.title}\n`
       : `Dante's Divine Comedy — ${book_title}, Canto ${canto.roman}\n`;
-    return title + canto.lines.join('\n') + `\n\n— ${translator}`;
+    return title + canto.lines.join('\n') + `\n\n— ${translator}\n${url}`;
+  }
+
+  function copySelected() {
+    const url = getUrl();
+    const sorted = Array.from(selectedLines).sort((a, b) => a - b);
+    const parts: string[] = [];
+
+    if (isBilingual) {
+      for (const i of sorted) {
+        const zh = canto.lines[i] ?? '';
+        const en = cantoEn!.lines[i] ?? '';
+        const first = biOrder === 'zh' ? zh : en;
+        const second = biOrder === 'zh' ? en : zh;
+        if (first.trim()) parts.push(first.trim());
+        if (second.trim()) parts.push(second.trim());
+        parts.push('');
+      }
+    } else {
+      for (const i of sorted) {
+        const line = canto.lines[i] ?? '';
+        if (line.trim()) parts.push(line.trim());
+      }
+    }
+
+    const text = parts.join('\n').trimEnd() + `\n\n— ${translator}\n${url}`;
+    navigator.clipboard.writeText(text).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+    setSelectedLines(new Set());
+    lastClickRef.current = null;
+  }
+
+  const copyLabel = lang === 'en' ? 'Copy' : '复制';
+  const copiedLabel = lang === 'en' ? 'Copied' : '已复制';
+
+  // ── Mono rendering ──────────────────────────────────────────────────────────
+  function renderMono() {
+    let lineNum = 0;
+    return canto.lines.map((line, idx) => {
+      if (!line.trim()) return <div key={idx} style={{ height: '0.75em' }} />;
+      lineNum++;
+      const selected = selectedLines.has(idx);
+      const isIndented = line.startsWith('  ') || line.startsWith('\u2003');
+      return (
+        <div
+          key={idx}
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            marginBottom: '0.1em',
+            borderRadius: '3px',
+            background: selected ? 'rgba(196,163,90,0.1)' : 'transparent',
+          }}
+        >
+          <span
+            onClick={(e) => { e.stopPropagation(); toggleLine(idx, e.shiftKey); }}
+            style={{ ...NUM_STYLE, color: selected ? 'var(--accent)' : 'var(--text-muted)' }}
+            title={lang === 'en' ? 'Click to select' : '点击选中'}
+          >
+            {lineNum}
+          </span>
+          <p
+            className="select-text"
+            style={{
+              ...VERSE_STYLE,
+              flex: 1,
+              paddingLeft: isIndented ? '1.5em' : '0',
+              letterSpacing: lang === 'zh' ? '0.02em' : '0.01em',
+            }}
+          >
+            {line.trim()}
+          </p>
+        </div>
+      );
+    });
+  }
+
+  // ── Bilingual rendering ─────────────────────────────────────────────────────
+  function renderBilingual() {
+    const len = Math.max(canto.lines.length, cantoEn!.lines.length);
+    const elements: React.ReactNode[] = [];
+    let lineNum = 0;
+
+    for (let i = 0; i < len; i++) {
+      const zh = canto.lines[i] ?? '';
+      const en = cantoEn!.lines[i] ?? '';
+
+      if (!zh.trim() && !en.trim()) {
+        elements.push(<div key={`gap-${i}`} style={{ height: '1em' }} />);
+        continue;
+      }
+
+      lineNum++;
+      const selected = selectedLines.has(i);
+      const firstLine = biOrder === 'zh' ? zh : en;
+      const secondLine = biOrder === 'zh' ? en : zh;
+      const isEnFirst = biOrder === 'en';
+
+      elements.push(
+        <div
+          key={`pair-${i}`}
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            marginBottom: '0.75em',
+            borderRadius: '3px',
+            background: selected ? 'rgba(196,163,90,0.1)' : 'transparent',
+          }}
+        >
+          <span
+            onClick={(e) => { e.stopPropagation(); toggleLine(i, e.shiftKey); }}
+            style={{
+              ...NUM_STYLE,
+              color: selected ? 'var(--accent)' : 'var(--text-muted)',
+              paddingTop: '0.15em',
+              lineHeight: undefined,
+            }}
+            title={lang === 'en' ? 'Click to select' : '点击选中'}
+          >
+            {lineNum}
+          </span>
+          <div style={{ flex: 1 }}>
+            {firstLine.trim() && (
+              <p
+                className="select-text"
+                style={{
+                  ...VERSE_STYLE,
+                  marginBottom: '0.15em',
+                  letterSpacing: isEnFirst ? '0.01em' : '0.02em',
+                  paddingLeft: (isEnFirst && (en.startsWith('  ') || en.startsWith('\u2003'))) ? '1.5em' : '0',
+                }}
+              >
+                {firstLine.trim()}
+              </p>
+            )}
+            {secondLine.trim() && (
+              <p
+                className="select-text"
+                style={{
+                  ...VERSE_STYLE,
+                  lineHeight: '1.7',
+                  opacity: 0.8,
+                  letterSpacing: isEnFirst ? '0.02em' : '0.01em',
+                  paddingLeft: (!isEnFirst && (en.startsWith('  ') || en.startsWith('\u2003'))) ? '1.5em' : '0',
+                }}
+              >
+                {secondLine.trim()}
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return elements;
   }
 
   return (
@@ -115,7 +313,6 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
               {biOrder === 'zh' ? '中↑英↓' : '英↑中↓'}
             </button>
           )}
-          {/* Font size */}
           <div className="flex items-center rounded overflow-hidden" style={{ border: '1px solid var(--border-light)' }}>
             <button onClick={() => adjustFont(-1)} className="flex items-center justify-center w-6 h-6 text-sm" style={{ background: 'var(--bg-active)', color: 'var(--text-secondary)' }} title="减小字号">A</button>
             <span className="text-xs px-1.5 select-none" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)', minWidth: '2rem', textAlign: 'center', lineHeight: '1.5rem' }}>{fontSize}</span>
@@ -128,11 +325,11 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
             onClick={() => setImmersive(v => !v)}
             className="flex items-center justify-center w-7 h-7 rounded text-sm"
             style={{ background: 'var(--bg-active)', border: '1px solid var(--border-light)', color: 'var(--text-muted)' }}
-            title={immersive ? '退出沉浸阅读' : '沉浸阅读'}
+            title={immersive ? (lang === 'en' ? 'Exit immersive' : '退出沉浸阅读') : (lang === 'en' ? 'Immersive' : '沉浸阅读')}
           >
             {immersive ? '⊡' : '⊞'}
           </button>
-          <CopyButton getText={getTextToCopy} />
+          <CopyButton getText={getTextToCopy} label={copyLabel} copiedLabel={copiedLabel} />
         </div>
       </div>
 
@@ -142,7 +339,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
         onClick={() => setImmersive(false)}
         style={{ display: 'none', position: 'fixed', top: '1rem', right: '1rem', zIndex: 100, alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', background: 'var(--bg-active)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)', cursor: 'pointer' }}
       >
-        ⊡ 退出沉浸
+        ⊡ {lang === 'en' ? 'Exit' : '退出沉浸'}
       </button>
 
       {/* Verse content */}
@@ -152,53 +349,50 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
         onScroll={handleScroll}
       >
         <div style={{ maxWidth: '680px', margin: '0 auto', fontSize: `${fontSize}px` }}>
-          {isBilingual ? (
-            (() => {
-              const len = Math.max(canto.lines.length, cantoEn!.lines.length);
-              const elements: React.ReactNode[] = [];
-              for (let i = 0; i < len; i++) {
-                const zh = canto.lines[i] ?? '';
-                const en = cantoEn!.lines[i] ?? '';
-                if (!zh.trim() && !en.trim()) {
-                  elements.push(<div key={`gap-${i}`} style={{ height: '1em' }} />);
-                } else {
-                  const firstLine = biOrder === 'zh' ? zh : en;
-                  const secondLine = biOrder === 'zh' ? en : zh;
-                  const firstIsEn = biOrder === 'en';
-                  elements.push(
-                    <div key={`pair-${i}`} style={{ marginBottom: '0.6em' }}>
-                      {firstLine.trim() && (
-                        <p className="select-text" style={{ color: 'var(--text-primary)', marginBottom: '0.05em', fontFamily: 'Georgia, Palatino Linotype, serif', fontSize: firstIsEn ? '0.9em' : '1em', lineHeight: '1.75', letterSpacing: firstIsEn ? '0.01em' : '0.02em', paddingLeft: (firstIsEn && (en.startsWith('  ') || en.startsWith('\u2003'))) ? '1.5em' : '0' }}>
-                          {firstLine.trim()}
-                        </p>
-                      )}
-                      {secondLine.trim() && (
-                        <p className="select-text" style={{ color: 'var(--text-muted)', fontFamily: 'Georgia, Palatino Linotype, serif', fontSize: firstIsEn ? '1em' : '0.875em', lineHeight: '1.65', letterSpacing: firstIsEn ? '0.02em' : '0.01em', paddingLeft: (!firstIsEn && (en.startsWith('  ') || en.startsWith('\u2003'))) ? '1.5em' : '0' }}>
-                          {secondLine.trim()}
-                        </p>
-                      )}
-                    </div>
-                  );
-                }
-              }
-              return elements;
-            })()
-          ) : (
-            canto.lines.map((line, idx) => {
-              if (!line.trim()) return <div key={idx} style={{ height: '0.75em' }} />;
-              const isIndented = line.startsWith('  ') || line.startsWith('\u2003');
-              return (
-                <p key={idx} className="leading-relaxed select-text" style={{ color: 'var(--text-primary)', paddingLeft: isIndented ? '1.5em' : '0', marginBottom: '0.1em', fontFamily: 'Georgia, Palatino Linotype, serif', fontSize: '1em', lineHeight: '1.85', letterSpacing: lang === 'zh' ? '0.02em' : '0.01em' }}>
-                  {line.trim()}
-                </p>
-              );
-            })
-          )}
+          {isBilingual ? renderBilingual() : renderMono()}
         </div>
         <div className="pt-6 text-sm text-center" style={{ borderTop: '1px solid var(--border)', color: 'var(--text-muted)', maxWidth: '680px', margin: '3rem auto 0' }}>
           <p>{translator}</p>
         </div>
       </div>
+
+      {/* Floating line-selection copy bar */}
+      {selectedLines.size > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '1.5rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 60,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.375rem 0.5rem 0.375rem 0.875rem',
+            borderRadius: '9999px',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-light)',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+            {selectedLines.size} {lang === 'en' ? (selectedLines.size > 1 ? 'lines' : 'line') : '行'}
+          </span>
+          <button
+            onClick={copySelected}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', background: 'var(--accent)', color: '#0f0e0d', border: 'none', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+          >
+            {copyLabel}
+          </button>
+          <button
+            onClick={() => { setSelectedLines(new Set()); lastClickRef.current = null; }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '1.5rem', height: '1.5rem', borderRadius: '50%', background: 'var(--bg-active)', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }
