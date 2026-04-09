@@ -32,6 +32,34 @@ export default function PageSlider({
   const dragX = useRef(0);
   const direction = useRef<'h' | 'v' | null>(null);
   const animating = useRef(false);
+  const headersHidden = useRef(false);
+
+  function hideHeaders() {
+    if (headersHidden.current) return;
+    headersHidden.current = true;
+    document.querySelectorAll<HTMLElement>('.canto-header').forEach((h) => {
+      h.style.transition = 'none';
+      h.style.maxHeight = '0';
+      h.style.paddingTop = '0';
+      h.style.paddingBottom = '0';
+      h.style.opacity = '0';
+      h.style.overflow = 'hidden';
+    });
+    document.body.classList.remove('scroll-down');
+  }
+
+  function restoreHeaders() {
+    if (!headersHidden.current) return;
+    headersHidden.current = false;
+    document.querySelectorAll<HTMLElement>('.canto-header').forEach((h) => {
+      h.style.transition = '';
+      h.style.maxHeight = '';
+      h.style.paddingTop = '';
+      h.style.paddingBottom = '';
+      h.style.opacity = '';
+      h.style.overflow = '';
+    });
+  }
 
   useEffect(() => {
     const el = containerRef.current;
@@ -59,8 +87,7 @@ export default function PageSlider({
 
       if (direction.current === 'h') {
         e.preventDefault();
-        // Collapse all canto-headers instantly so both panels look identical during drag
-        document.body.classList.add('swiping');
+        hideHeaders();
         let clamped = dx;
         if (dx > 0 && !prevHref) clamped = Math.min(dx * 0.15, 30);
         if (dx < 0 && !nextHref) clamped = Math.max(dx * 0.15, -30);
@@ -75,8 +102,7 @@ export default function PageSlider({
       const threshold = _el.offsetWidth * 0.28;
       const dx = dragX.current;
       animating.current = true;
-      // Re-enable transitions for the swipe-complete animation
-      document.body.classList.remove('swiping');
+      restoreHeaders();
       track.style.transition = 'transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 
       if (dx > threshold && prevHref) {
@@ -86,8 +112,6 @@ export default function PageSlider({
         track.style.transform = 'translateX(-66.6666%)';
         setTimeout(() => { router.push(nextHref!); animating.current = false; }, 320);
       } else {
-        // Cancelled swipe: restore headers
-        document.body.classList.remove('scroll-down');
         track.style.transform = 'translateX(-33.3333%)';
         setTimeout(() => { animating.current = false; }, 320);
       }
@@ -138,7 +162,7 @@ function AdjacentPane({ canto, lang, fontSize, bookTitle, bookTitleZh }: {
 }) {
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--bg)' }}>
-      {/* Header — same class as CantoContent so scroll-hide applies equally */}
+      {/* Header — same class as CantoContent so direct style manipulation applies equally */}
       <div
         className="canto-header flex items-center justify-between px-4 py-3 md:px-8 md:py-4 shrink-0"
         style={{ borderBottom: '1px solid var(--border)' }}
