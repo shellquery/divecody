@@ -15,6 +15,7 @@ interface Props {
 
 export default function CantoContent({ canto, cantoEn, book_title, book_title_zh, lang, translator }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const lastScrollY = useRef(0);
   // 'zh' = Chinese first (default), 'en' = English first
   const [biOrder, setBiOrder] = useState<'zh' | 'en'>('zh');
   const [immersive, setImmersive] = useState(false);
@@ -29,6 +30,24 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
     }
     return () => { document.body.classList.remove('immersive'); };
   }, [immersive]);
+
+  // Clean up scroll class on unmount
+  useEffect(() => {
+    return () => { document.body.classList.remove('scroll-down'); };
+  }, []);
+
+  function handleScroll(e: React.UIEvent<HTMLDivElement>) {
+    const current = e.currentTarget.scrollTop;
+    const delta = current - lastScrollY.current;
+    if (current <= 20) {
+      document.body.classList.remove('scroll-down');
+    } else if (delta > 6) {
+      document.body.classList.add('scroll-down');
+    } else if (delta < -6) {
+      document.body.classList.remove('scroll-down');
+    }
+    lastScrollY.current = current;
+  }
 
   function getTextToCopy() {
     if (isBilingual) {
@@ -140,6 +159,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
       <div
         ref={contentRef}
         className="flex-1 overflow-y-auto fade-in canto-scroll"
+        onScroll={handleScroll}
       >
         <div style={{ maxWidth: '680px', margin: '0 auto' }}>
           {isBilingual ? (

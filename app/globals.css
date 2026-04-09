@@ -54,6 +54,16 @@ body {
   }
 }
 
+/* ── Auto-hide topbar on scroll down ── */
+.topbar {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+body.scroll-down .topbar {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ── Immersive mode ── */
 body.immersive .topbar {
   display: none;
