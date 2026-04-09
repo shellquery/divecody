@@ -7,6 +7,7 @@ import type { BookId, Lang } from '@/lib/types';
 import Sidebar from '@/components/Sidebar';
 import LangToggle from '@/components/LangToggle';
 import CantoContent from '@/components/CantoContent';
+import ThemeToggle from '@/components/ThemeToggle';
 
 interface Params {
   book: string;
@@ -47,7 +48,6 @@ export default async function ReadPage({
   const maxCanto = CANTO_COUNTS[bookId];
   if (isNaN(cantoNum) || cantoNum < 1 || cantoNum > maxCanto) notFound();
 
-  // If Chinese is requested but only placeholder exists, flag it and show English
   const zhIsPlaceholder = (lang === 'zh' || lang === 'bilingual') && isZhPlaceholder(bookId);
 
   const cantoEn = getCanto(bookId, cantoNum, 'en');
@@ -65,49 +65,57 @@ export default async function ReadPage({
   const prevCanto = cantoNum > 1 ? cantoNum - 1 : null;
   const nextCanto = cantoNum < maxCanto ? cantoNum + 1 : null;
 
+  const prevHref = prevCanto ? `/read/${bookId}/${prevCanto}?lang=${lang}` : '#';
+  const nextHref = nextCanto ? `/read/${bookId}/${nextCanto}?lang=${lang}` : '#';
+
   return (
     <div className="flex h-full" style={{ background: 'var(--bg)' }}>
-      <Suspense fallback={<div style={{ width: 220, background: 'var(--bg-surface)' }} />}>
+      <Suspense fallback={<div className="hidden md:block" style={{ width: 220, background: 'var(--bg-surface)' }} />}>
         <Sidebar />
       </Suspense>
 
       <div className="flex flex-col flex-1 min-w-0 h-full">
-        {/* Top bar */}
+        {/* Top bar — "topbar" class used by immersive mode CSS */}
         <header
-          className="flex items-center justify-between px-6 py-3 shrink-0"
+          className="topbar flex items-center justify-between pl-12 pr-3 py-2.5 md:px-6 md:py-3 shrink-0"
           style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}
         >
-          <div className="flex items-center gap-3">
-            <h1 className="text-base font-medium tracking-wide" style={{ color: 'var(--accent)' }}>
-              神曲 · Divine Comedy
+          {/* Left: title (author hidden on mobile) */}
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
+            <h1
+              className="text-sm md:text-base font-medium tracking-wide truncate"
+              style={{ color: 'var(--accent)' }}
+            >
+              神曲
+              <span className="hidden sm:inline"> · Divine Comedy</span>
             </h1>
-            <span style={{ color: 'var(--border-light)' }}>|</span>
-            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            <span className="hidden md:inline" style={{ color: 'var(--border-light)' }}>|</span>
+            <span className="hidden md:inline text-sm" style={{ color: 'var(--text-secondary)' }}>
               {lang === 'en' ? 'Dante Alighieri' : '但丁 · 阿利吉耶里'}
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
-            {/* Status badge */}
+          {/* Right: controls */}
+          <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
             {zhIsPlaceholder && (
               <span
-                className="text-xs px-2.5 py-1 rounded-full"
+                className="hidden sm:inline text-xs px-2 py-0.5 rounded-full"
                 style={{
                   background: 'rgba(196,163,90,0.12)',
                   color: 'var(--accent)',
                   border: '1px solid var(--accent-dim)',
                 }}
               >
-                中文翻译生成中…
+                翻译生成中…
               </span>
             )}
 
             {/* Prev / Next */}
             <div className="flex gap-1">
               <Link
-                href={prevCanto ? `/read/${bookId}/${prevCanto}?lang=${lang}` : '#'}
+                href={prevHref}
                 aria-disabled={!prevCanto}
-                className="px-3 py-1.5 rounded text-sm transition-colors"
+                className="px-2 py-1.5 md:px-3 rounded text-xs md:text-sm transition-colors"
                 style={{
                   background: prevCanto ? 'var(--bg-active)' : 'var(--bg-hover)',
                   color: prevCanto ? 'var(--text-secondary)' : 'var(--text-muted)',
@@ -116,12 +124,13 @@ export default async function ReadPage({
                   opacity: prevCanto ? 1 : 0.35,
                 }}
               >
-                ← {lang === 'zh' ? '上章' : 'Prev'}
+                <span className="inline md:hidden">‹</span>
+                <span className="hidden md:inline">← {lang === 'zh' ? '上章' : 'Prev'}</span>
               </Link>
               <Link
-                href={nextCanto ? `/read/${bookId}/${nextCanto}?lang=${lang}` : '#'}
+                href={nextHref}
                 aria-disabled={!nextCanto}
-                className="px-3 py-1.5 rounded text-sm transition-colors"
+                className="px-2 py-1.5 md:px-3 rounded text-xs md:text-sm transition-colors"
                 style={{
                   background: nextCanto ? 'var(--bg-active)' : 'var(--bg-hover)',
                   color: nextCanto ? 'var(--text-secondary)' : 'var(--text-muted)',
@@ -130,11 +139,13 @@ export default async function ReadPage({
                   opacity: nextCanto ? 1 : 0.35,
                 }}
               >
-                {lang === 'zh' ? '下章' : 'Next'} →
+                <span className="inline md:hidden">›</span>
+                <span className="hidden md:inline">{lang === 'zh' ? '下章' : 'Next'} →</span>
               </Link>
             </div>
 
             <LangToggle current={lang} />
+            <ThemeToggle />
           </div>
         </header>
 

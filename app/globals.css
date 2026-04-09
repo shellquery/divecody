@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* ── Dark theme (default) ── */
 :root {
   --bg: #0f0e0d;
   --bg-surface: #1a1815;
@@ -14,9 +15,22 @@
   --accent-dim: #8a6e38;
 }
 
-* {
-  box-sizing: border-box;
+/* ── Light theme ── */
+[data-theme="light"] {
+  --bg: #f5f0e8;
+  --bg-surface: #ede7db;
+  --bg-hover: #e4ddd0;
+  --bg-active: #d9d0c0;
+  --border: #cfc6b4;
+  --border-light: #c4baa7;
+  --text-primary: #22190d;
+  --text-secondary: #5a4e3c;
+  --text-muted: #8a7a64;
+  --accent: #8b6208;
+  --accent-dim: #b8921a;
 }
+
+* { box-sizing: border-box; }
 
 html, body {
   height: 100%;
@@ -27,6 +41,28 @@ body {
   background-color: var(--bg);
   color: var(--text-primary);
   font-family: 'Georgia', 'Palatino Linotype', serif;
+}
+
+/* ── Responsive reading padding ── */
+.canto-scroll {
+  padding: 2rem 3rem 4rem;
+}
+
+@media (max-width: 767px) {
+  .canto-scroll {
+    padding: 1.25rem 1rem 3rem;
+  }
+}
+
+/* ── Immersive mode ── */
+body.immersive .topbar {
+  display: none;
+}
+body.immersive aside {
+  display: none !important;
+}
+body.immersive .immersive-exit {
+  display: flex !important;
 }
 
 ::-webkit-scrollbar { width: 5px; }
