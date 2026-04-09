@@ -78,9 +78,16 @@ body.scroll-down .mobile-menu-btn {
   transition: opacity 0.2s ease;
 }
 
-/* Disable transitions during swipe so both panels snap to same state instantly */
+/* During swipe: instantly collapse all canto headers so both panels look identical */
+body.swiping .canto-header {
+  transition: none !important;
+  max-height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  opacity: 0 !important;
+}
+
 body.swiping .topbar,
-body.swiping .canto-header,
 body.swiping .sidebar-header {
   transition: none !important;
 }

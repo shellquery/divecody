@@ -59,9 +59,8 @@ export default function PageSlider({
 
       if (direction.current === 'h') {
         e.preventDefault();
-        // Disable transitions so headers snap instantly to same state on both panels
+        // Collapse all canto-headers instantly so both panels look identical during drag
         document.body.classList.add('swiping');
-        document.body.classList.remove('scroll-down');
         let clamped = dx;
         if (dx > 0 && !prevHref) clamped = Math.min(dx * 0.15, 30);
         if (dx < 0 && !nextHref) clamped = Math.max(dx * 0.15, -30);
@@ -87,6 +86,8 @@ export default function PageSlider({
         track.style.transform = 'translateX(-66.6666%)';
         setTimeout(() => { router.push(nextHref!); animating.current = false; }, 320);
       } else {
+        // Cancelled swipe: restore headers
+        document.body.classList.remove('scroll-down');
         track.style.transform = 'translateX(-33.3333%)';
         setTimeout(() => { animating.current = false; }, 320);
       }
