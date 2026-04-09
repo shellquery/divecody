@@ -59,7 +59,8 @@ export default function PageSlider({
 
       if (direction.current === 'h') {
         e.preventDefault();
-        // Restore headers so both panels look the same during swipe
+        // Disable transitions so headers snap instantly to same state on both panels
+        document.body.classList.add('swiping');
         document.body.classList.remove('scroll-down');
         let clamped = dx;
         if (dx > 0 && !prevHref) clamped = Math.min(dx * 0.15, 30);
@@ -75,6 +76,8 @@ export default function PageSlider({
       const threshold = _el.offsetWidth * 0.28;
       const dx = dragX.current;
       animating.current = true;
+      // Re-enable transitions for the swipe-complete animation
+      document.body.classList.remove('swiping');
       track.style.transition = 'transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 
       if (dx > threshold && prevHref) {

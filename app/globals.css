@@ -78,6 +78,13 @@ body.scroll-down .mobile-menu-btn {
   transition: opacity 0.2s ease;
 }
 
+/* Disable transitions during swipe so both panels snap to same state instantly */
+body.swiping .topbar,
+body.swiping .canto-header,
+body.swiping .sidebar-header {
+  transition: none !important;
+}
+
 /* ── Immersive mode ── */
 body.immersive .topbar {
   display: none;
