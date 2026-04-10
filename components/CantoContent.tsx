@@ -58,6 +58,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
   const [biOrder, setBiOrder] = useState<'zh' | 'en'>('zh');
   const [immersive, setImmersive] = useState(false);
   const [fontSize, setFontSize] = useState(16);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [selectedLines, setSelectedLines] = useState<Set<number>>(new Set());
   const lastClickRef = useRef<number | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -67,8 +68,13 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
   const lbDrag = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('fontSize');
-    if (saved) setFontSize(Number(saved));
+    const savedSize = localStorage.getItem('fontSize');
+    if (savedSize) setFontSize(Number(savedSize));
+    const savedBiOrder = localStorage.getItem('biOrder');
+    if (savedBiOrder === 'en') setBiOrder('en');
+    const savedImmersive = localStorage.getItem('immersive');
+    if (savedImmersive === 'true') setImmersive(true);
+    setSettingsLoaded(true);
   }, []);
 
   function adjustFont(delta: number) {
@@ -407,7 +413,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
         <div className="flex items-center gap-2">
           {isBilingual && (
             <button
-              onClick={() => setBiOrder(o => o === 'zh' ? 'en' : 'zh')}
+              onClick={() => setBiOrder(o => { const next = o === 'zh' ? 'en' : 'zh'; localStorage.setItem('biOrder', next); return next; })}
               className="flex items-center justify-center w-7 h-7 rounded"
               style={{ background: 'var(--bg-active)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}
               title={biOrder === 'zh' ? '中↑英↓ · 点击切换' : '英↑中↓ · 点击切换'}
@@ -424,7 +430,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
             {canto.lines.filter(l => l.trim()).length}{lang === 'en' ? ' lines' : ' 行'}
           </span>
           <button
-            onClick={() => setImmersive(v => !v)}
+            onClick={() => setImmersive(v => { const next = !v; localStorage.setItem('immersive', String(next)); return next; })}
             className="flex items-center justify-center w-7 h-7 rounded text-sm"
             style={{ background: 'var(--bg-active)', border: '1px solid var(--border-light)', color: 'var(--text-muted)' }}
             title={immersive ? (lang === 'en' ? 'Exit immersive' : '退出沉浸阅读') : (lang === 'en' ? 'Immersive' : '沉浸阅读')}

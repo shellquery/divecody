@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { BOOKS, CANTO_COUNTS } from '@/lib/types';
@@ -84,6 +84,11 @@ function NavLinks({
 export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    if (saved === 'true') setDesktopCollapsed(true);
+  }, []);
   const params = useParams<{ book: string; canto: string }>();
   const searchParams = useSearchParams();
   const lang = searchParams.get('lang') ?? 'zh';
@@ -117,7 +122,7 @@ export default function Sidebar() {
             {lang === 'en' ? 'Navigation' : '导航'}
           </span>
           <button
-            onClick={() => setDesktopCollapsed(true)}
+            onClick={() => { setDesktopCollapsed(true); localStorage.setItem('sidebarCollapsed', 'true'); }}
             className="p-1 rounded text-xs"
             style={{ color: 'var(--text-muted)' }}
             title={lang === 'en' ? 'Collapse sidebar' : '收起侧栏'}
@@ -144,7 +149,7 @@ export default function Sidebar() {
             fontSize: '10px',
             cursor: 'pointer',
           }}
-          onClick={() => setDesktopCollapsed(false)}
+          onClick={() => { setDesktopCollapsed(false); localStorage.setItem('sidebarCollapsed', 'false'); }}
           title={lang === 'en' ? 'Expand sidebar' : '展开侧栏'}
         >
           ›

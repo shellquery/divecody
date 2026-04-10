@@ -9,6 +9,7 @@ import LangToggle from '@/components/LangToggle';
 import CantoContent from '@/components/CantoContent';
 import ThemeToggle from '@/components/ThemeToggle';
 import PageSlider from '@/components/PageSlider';
+import ReadingProgressSaver from '@/components/ReadingProgressSaver';
 import { getDorehImage } from '@/lib/dore';
 
 interface Params { book: string; canto: string }
@@ -75,6 +76,7 @@ export default async function ReadPage({
 
   return (
     <div className="flex h-full" style={{ background: 'var(--bg)' }}>
+      <Suspense fallback={null}><ReadingProgressSaver /></Suspense>
       <Suspense fallback={<div className="hidden md:block" style={{ width: 220, background: 'var(--bg-surface)' }} />}>
         <Sidebar />
       </Suspense>
