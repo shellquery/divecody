@@ -10,19 +10,18 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: '神曲 · Divine Comedy',
+  title: 'DivineComedy',
   description: '但丁《神曲》中英文阅读 — Dante\'s Divine Comedy in Chinese and English',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: '神曲',
+    title: 'DivineComedy',
   },
   icons: {
     icon: [
       { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-      { url: '/icon.svg',           type: 'image/svg+xml' },
     ],
     apple: [
       { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },

@@ -1,6 +1,6 @@
 {
-  "name": "神曲 · Divine Comedy",
-  "short_name": "神曲",
+  "name": "DivineComedy",
+  "short_name": "DivineComedy",
   "description": "但丁《神曲》中英文阅读 — Dante's Divine Comedy",
   "start_url": "/read/inferno/1?lang=zh",
   "scope": "/",
@@ -28,11 +28,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
     }
   ]
 }

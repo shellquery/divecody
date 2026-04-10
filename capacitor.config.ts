@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.shellquery.divecody',
-  appName: '神曲',
+  appName: 'DivineComedy',
   webDir: 'www',
   server: {
     url: 'https://divecody.vercel.app',
