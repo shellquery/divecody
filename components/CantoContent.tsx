@@ -392,7 +392,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
       >
         {/* Doré illustration banner */}
         {illustrationUrl && (
-          <div style={{ position: 'relative', width: '100%', height: '220px', overflow: 'hidden', flexShrink: 0 }}>
+          <div style={{ position: 'relative', width: '100%', height: 'clamp(220px, 80vw, 380px)', overflow: 'hidden', flexShrink: 0, backgroundColor: '#0f0e0d' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={illustrationUrl}
@@ -401,9 +401,9 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
-                objectPosition: 'center 25%',
-                filter: 'grayscale(55%) brightness(0.48) contrast(1.15)',
+                objectFit: 'contain',
+                objectPosition: 'center top',
+                filter: 'grayscale(45%) brightness(0.70) contrast(1.1)',
                 display: 'block',
               }}
             />
