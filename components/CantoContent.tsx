@@ -60,6 +60,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
   const [fontSize, setFontSize] = useState(16);
   const [selectedLines, setSelectedLines] = useState<Set<number>>(new Set());
   const lastClickRef = useRef<number | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('fontSize');
@@ -85,6 +86,13 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
   useEffect(() => {
     return () => { document.body.classList.remove('scroll-down'); };
   }, []);
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightboxOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [lightboxOpen]);
 
   function handleScroll(e: React.UIEvent<HTMLDivElement>) {
     const current = e.currentTarget.scrollTop;
@@ -392,42 +400,88 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
       >
         {/* Doré illustration banner */}
         {illustrationUrl && (
-          <div style={{ position: 'relative', width: '100%', height: 'clamp(220px, 80vw, 380px)', overflow: 'hidden', flexShrink: 0, backgroundColor: '#0f0e0d' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={illustrationUrl}
-              alt=""
-              aria-hidden
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                objectPosition: 'center top',
-                filter: 'grayscale(45%) brightness(0.70) contrast(1.1)',
-                display: 'block',
-              }}
-            />
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(to bottom, rgba(15,14,13,0.05) 0%, rgba(15,14,13,0.35) 55%, rgba(15,14,13,0.92) 88%, rgba(15,14,13,1) 100%)',
-            }} />
-            {/* Faint canto label overlaid at bottom of banner */}
-            <div style={{
-              position: 'absolute',
-              bottom: '0.75rem',
-              left: 0,
-              right: 0,
-              textAlign: 'center',
-              color: 'rgba(196,163,90,0.55)',
-              fontSize: '0.65rem',
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase',
-              userSelect: 'none',
-            }}>
-              Gustave Doré · 1857
+          <>
+            <div
+              role="button"
+              aria-label="放大插图"
+              onClick={() => setLightboxOpen(true)}
+              style={{ position: 'relative', width: '100%', height: 'clamp(220px, 80vw, 380px)', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg)', cursor: 'zoom-in', display: 'flex', justifyContent: 'center' }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={illustrationUrl}
+                alt="Gustave Doré illustration"
+                style={{
+                  height: '100%',
+                  width: 'auto',
+                  objectFit: 'contain',
+                  objectPosition: 'center top',
+                  filter: 'grayscale(45%) brightness(0.70) contrast(1.1)',
+                  display: 'block',
+                }}
+              />
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(to bottom, transparent 0%, color-mix(in srgb, var(--bg) 35%, transparent) 55%, color-mix(in srgb, var(--bg) 92%, transparent) 88%, var(--bg) 100%)',
+                pointerEvents: 'none',
+              }} />
+              {/* Faint canto label overlaid at bottom of banner */}
+              <div style={{
+                position: 'absolute',
+                bottom: '0.75rem',
+                left: 0,
+                right: 0,
+                textAlign: 'center',
+                color: 'rgba(196,163,90,0.55)',
+                fontSize: '0.65rem',
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                userSelect: 'none',
+                pointerEvents: 'none',
+              }}>
+                Gustave Doré · 1857
+              </div>
             </div>
-          </div>
+
+            {/* Lightbox */}
+            {lightboxOpen && (
+              <div
+                onClick={() => setLightboxOpen(false)}
+                style={{
+                  position: 'fixed', inset: 0, zIndex: 1000,
+                  backgroundColor: 'rgba(0,0,0,0.92)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'zoom-out',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={illustrationUrl}
+                  alt="Gustave Doré illustration"
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    maxWidth: '90vw',
+                    maxHeight: '90vh',
+                    objectFit: 'contain',
+                    filter: 'grayscale(20%) brightness(0.92) contrast(1.05)',
+                    cursor: 'default',
+                  }}
+                />
+                <button
+                  onClick={() => setLightboxOpen(false)}
+                  aria-label="关闭"
+                  style={{
+                    position: 'absolute', top: '1rem', right: '1rem',
+                    background: 'rgba(255,255,255,0.1)', border: 'none',
+                    color: '#fff', width: '2.2rem', height: '2.2rem',
+                    borderRadius: '50%', fontSize: '1.1rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >✕</button>
+              </div>
+            )}
+          </>
         )}
         <div style={{ maxWidth: '680px', margin: '0 auto', fontSize: `${fontSize}px` }}>
           {isBilingual ? renderBilingual() : renderMono()}
