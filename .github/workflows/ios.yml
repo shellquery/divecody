@@ -30,6 +30,12 @@ jobs:
       - name: Generate PWA icons
         run: node scripts/gen-icons.mjs
 
+      - name: Fetch Doré illustrations index
+        # Pulls per-canto image URLs from Wikimedia Commons and writes
+        # public/data/dore.json; failures are non-fatal (banners simply
+        # won't show for cantos without a cached URL).
+        run: node scripts/fetch-dore.mjs || echo "⚠️  fetch-dore failed — continuing without illustrations"
+
       - name: Build Next.js
         run: npm run build
         env:

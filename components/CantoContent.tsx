@@ -11,6 +11,7 @@ interface Props {
   book_title_zh: string;
   lang: Lang;
   translator: string;
+  illustrationUrl?: string;
 }
 
 const VERSE_STYLE: React.CSSProperties = {
@@ -51,7 +52,7 @@ function SwapIcon() {
   );
 }
 
-export default function CantoContent({ canto, cantoEn, book_title, book_title_zh, lang, translator }: Props) {
+export default function CantoContent({ canto, cantoEn, book_title, book_title_zh, lang, translator, illustrationUrl }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
   const [biOrder, setBiOrder] = useState<'zh' | 'en'>('zh');
@@ -389,6 +390,45 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
         className="flex-1 overflow-y-auto fade-in canto-scroll"
         onScroll={handleScroll}
       >
+        {/* Doré illustration banner */}
+        {illustrationUrl && (
+          <div style={{ position: 'relative', width: '100%', height: '220px', overflow: 'hidden', flexShrink: 0 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={illustrationUrl}
+              alt=""
+              aria-hidden
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'center 25%',
+                filter: 'grayscale(55%) brightness(0.48) contrast(1.15)',
+                display: 'block',
+              }}
+            />
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(to bottom, rgba(15,14,13,0.05) 0%, rgba(15,14,13,0.35) 55%, rgba(15,14,13,0.92) 88%, rgba(15,14,13,1) 100%)',
+            }} />
+            {/* Faint canto label overlaid at bottom of banner */}
+            <div style={{
+              position: 'absolute',
+              bottom: '0.75rem',
+              left: 0,
+              right: 0,
+              textAlign: 'center',
+              color: 'rgba(196,163,90,0.55)',
+              fontSize: '0.65rem',
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              userSelect: 'none',
+            }}>
+              Gustave Doré · 1857
+            </div>
+          </div>
+        )}
         <div style={{ maxWidth: '680px', margin: '0 auto', fontSize: `${fontSize}px` }}>
           {isBilingual ? renderBilingual() : renderMono()}
         </div>

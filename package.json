@@ -11,7 +11,8 @@
     "gen-icons": "node scripts/gen-icons.mjs",
     "fetch-en": "python3 scripts/parse_english.py",
     "translate-zh": "python3 scripts/translate_to_chinese.py",
-    "fetch-zh": "python3 scripts/fetch_chinese.py"
+    "fetch-zh": "python3 scripts/fetch_chinese.py",
+    "fetch-dore": "node scripts/fetch-dore.mjs"
   },
   "dependencies": {
     "@capacitor/cli": "^6.2.1",

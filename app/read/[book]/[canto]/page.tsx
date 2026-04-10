@@ -9,6 +9,7 @@ import LangToggle from '@/components/LangToggle';
 import CantoContent from '@/components/CantoContent';
 import ThemeToggle from '@/components/ThemeToggle';
 import PageSlider from '@/components/PageSlider';
+import { getDorehImage } from '@/lib/dore';
 
 interface Params { book: string; canto: string }
 interface SearchParams { lang?: string }
@@ -60,6 +61,8 @@ export default async function ReadPage({
     (zhIsPlaceholder ? cantoEn : cantoZh);
 
   if (!canto || !meta || !cantoEn) notFound();
+
+  const illustrationUrl = getDorehImage(bookId, cantoNum);
 
   // Adjacent cantos for swipe preview
   const prevNum = cantoNum > 1 ? cantoNum - 1 : null;
@@ -146,6 +149,7 @@ export default async function ReadPage({
                 ? `${meta.translator}  ·  Henry Wadsworth Longfellow (1867)`
                 : meta.translator
             }
+            illustrationUrl={illustrationUrl}
           />
         </PageSlider>
       </div>
