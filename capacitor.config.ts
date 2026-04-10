@@ -14,6 +14,12 @@ const config: CapacitorConfig = {
     contentInset: 'automatic',
     limitsNavigationsToAppBoundDomains: true,
   },
+  android: {
+    backgroundColor: '#0f0e0d',
+    allowMixedContent: false,
+    captureInput: true,
+    webContentsDebuggingEnabled: false,
+  },
 };
 
 export default config;
