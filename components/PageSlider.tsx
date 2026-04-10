@@ -81,8 +81,10 @@ export default function PageSlider({
       const dy = e.touches[0].clientY - startY.current;
 
       if (!direction.current) {
-        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-        direction.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+        if (Math.abs(dx) < 16 && Math.abs(dy) < 16) return;
+        // Require horizontal to be 2.5× vertical so diagonal (text-selection) gestures
+        // don't accidentally trigger page navigation.
+        direction.current = Math.abs(dx) > Math.abs(dy) * 2.5 ? 'h' : 'v';
       }
 
       if (direction.current === 'h') {
