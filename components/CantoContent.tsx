@@ -61,6 +61,10 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
   const [selectedLines, setSelectedLines] = useState<Set<number>>(new Set());
   const lastClickRef = useRef<number | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const lbOverlayRef = useRef<HTMLDivElement>(null);
+  const lbState = useRef({ scale: 1, x: 0, y: 0 });
+  const [lbTransform, setLbTransform] = useState({ scale: 1, x: 0, y: 0 });
+  const lbDrag = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('fontSize');
@@ -93,6 +97,54 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [lightboxOpen]);
+
+  // Reset zoom/pan when lightbox opens
+  useEffect(() => {
+    if (lightboxOpen) {
+      lbState.current = { scale: 1, x: 0, y: 0 };
+      setLbTransform({ scale: 1, x: 0, y: 0 });
+      lbDrag.current = null;
+    }
+  }, [lightboxOpen]);
+
+  // Mouse-wheel zoom toward cursor
+  useEffect(() => {
+    const el = lbOverlayRef.current;
+    if (!el || !lightboxOpen) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const { scale, x, y } = lbState.current;
+      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      const newScale = Math.min(10, Math.max(1, scale * factor));
+      if (newScale === scale) return;
+      // Zoom toward cursor: keep the image point under the cursor fixed
+      const rect = el.getBoundingClientRect();
+      const vx = e.clientX - rect.left - rect.width / 2;
+      const vy = e.clientY - rect.top - rect.height / 2;
+      const ratio = newScale / scale;
+      const newX = vx + (x - vx) * ratio;
+      const newY = vy + (y - vy) * ratio;
+      lbState.current = { scale: newScale, x: newX, y: newY };
+      setLbTransform({ scale: newScale, x: newX, y: newY });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [lightboxOpen]);
+
+  function lbMouseDown(e: React.MouseEvent) {
+    if (lbState.current.scale <= 1) return;
+    e.preventDefault();
+    lbDrag.current = { startX: e.clientX, startY: e.clientY, ox: lbState.current.x, oy: lbState.current.y };
+  }
+  function lbMouseMove(e: React.MouseEvent) {
+    if (!lbDrag.current) return;
+    const x = lbDrag.current.ox + (e.clientX - lbDrag.current.startX);
+    const y = lbDrag.current.oy + (e.clientY - lbDrag.current.startY);
+    lbState.current = { ...lbState.current, x, y };
+    setLbTransform(t => ({ ...t, x, y }));
+  }
+  function lbMouseUp() { lbDrag.current = null; }
+  function lbClick() { if (lbState.current.scale <= 1) setLightboxOpen(false); }
 
   function handleScroll(e: React.UIEvent<HTMLDivElement>) {
     const current = e.currentTarget.scrollTop;
@@ -405,7 +457,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
               role="button"
               aria-label="放大插图"
               onClick={() => setLightboxOpen(true)}
-              style={{ position: 'relative', width: '100%', height: 'clamp(220px, 80vw, 380px)', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg)', cursor: 'zoom-in', display: 'flex', justifyContent: 'center' }}
+              style={{ position: 'relative', width: '100%', height: 'clamp(220px, 80vw, 380px)', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg)', cursor: 'zoom-in', display: 'flex', justifyContent: 'flex-start', paddingLeft: 'max(0px, calc((100% - 680px) / 2))' }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -444,32 +496,41 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
               </div>
             </div>
 
-            {/* Lightbox */}
+            {/* Lightbox with wheel-zoom + drag-to-pan */}
             {lightboxOpen && (
               <div
-                onClick={() => setLightboxOpen(false)}
+                ref={lbOverlayRef}
+                onClick={lbClick}
+                onMouseDown={lbMouseDown}
+                onMouseMove={lbMouseMove}
+                onMouseUp={lbMouseUp}
+                onMouseLeave={lbMouseUp}
                 style={{
                   position: 'fixed', inset: 0, zIndex: 1000,
                   backgroundColor: 'rgba(0,0,0,0.92)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'zoom-out',
+                  cursor: lbDrag.current ? 'grabbing' : lbTransform.scale > 1 ? 'grab' : 'zoom-out',
+                  userSelect: 'none', overflow: 'hidden',
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={illustrationUrl}
                   alt="Gustave Doré illustration"
-                  onClick={e => e.stopPropagation()}
+                  draggable={false}
                   style={{
                     maxWidth: '90vw',
                     maxHeight: '90vh',
                     objectFit: 'contain',
                     filter: 'grayscale(20%) brightness(0.92) contrast(1.05)',
-                    cursor: 'default',
+                    transform: `translate(${lbTransform.x}px, ${lbTransform.y}px) scale(${lbTransform.scale})`,
+                    transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
                   }}
                 />
                 <button
-                  onClick={() => setLightboxOpen(false)}
+                  onClick={e => { e.stopPropagation(); setLightboxOpen(false); }}
                   aria-label="关闭"
                   style={{
                     position: 'absolute', top: '1rem', right: '1rem',
