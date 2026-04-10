@@ -90,9 +90,11 @@ export default function PageSlider({
       if (direction.current === 'h') {
         e.preventDefault();
         hideHeaders();
-        let clamped = dx;
-        if (dx > 0 && !prevHref) clamped = Math.min(dx * 0.15, 30);
-        if (dx < 0 && !nextHref) clamped = Math.max(dx * 0.15, -30);
+        // Apply resistance: drag feels heavier (0.65×) so user must commit further
+        const resistant = dx * 0.65;
+        let clamped = resistant;
+        if (dx > 0 && !prevHref) clamped = Math.min(resistant * 0.2, 20);
+        if (dx < 0 && !nextHref) clamped = Math.max(resistant * 0.2, -20);
         dragX.current = clamped;
         track.style.transition = 'none';
         track.style.transform = `translateX(calc(-33.3333% + ${clamped}px))`;
@@ -101,7 +103,8 @@ export default function PageSlider({
 
     function onTouchEnd() {
       if (!track || direction.current !== 'h') return;
-      const threshold = _el.offsetWidth * 0.28;
+      // threshold = 42% of screen width — must drag far to commit
+      const threshold = _el.offsetWidth * 0.42;
       const dx = dragX.current;
       animating.current = true;
       restoreHeaders();
