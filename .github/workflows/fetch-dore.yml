@@ -1,0 +1,39 @@
+name: Fetch Doré Illustrations Index
+
+on:
+  workflow_dispatch:   # run manually from GitHub Actions UI
+  schedule:
+    - cron: '0 3 * * 0'   # weekly on Sunday 03:00 UTC
+
+jobs:
+  fetch:
+    name: Fetch & commit dore.json
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch Doré illustration URLs from Wikimedia Commons
+        run: node scripts/fetch-dore.mjs
+
+      - name: Commit updated dore.json
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add public/data/dore.json
+          git diff --staged --quiet && echo "No changes" && exit 0
+          TOTAL=$(node -e "const d=require('./public/data/dore.json'); console.log(Object.values(d).flatMap(Object.values).length)")
+          git commit -m "chore: update Doré illustration index (${TOTAL} images)"
+          git push
