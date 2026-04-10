@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * Fetches Gustave Doré illustration URLs from Wikimedia Commons and writes
- * public/data/dore.json.  Strategy: query the top-level book category to get
- * all illustration filenames, then parse the Roman-numeral canto number from
- * the filename (e.g. "…Plate_8_(Canto_III_-_…).jpg" → Canto 3).
+ * Fetches Gustave Doré illustration URLs from GITenberg (GitHub-hosted
+ * Project Gutenberg books) and writes public/data/dore.json.
+ *
+ * Source repos are public-domain Doré editions mirrored on GitHub, so
+ * this script works in environments where Wikimedia is blocked.
  *
  * Run: node scripts/fetch-dore.mjs
  */
@@ -15,170 +16,99 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root     = join(__dirname, '..');
 const outPath  = join(root, 'public', 'data', 'dore.json');
 
-const THUMB_W = 900;
-const UA      = 'divecody/1.0 (https://github.com/shellquery/divecody)';
+const BASE = 'https://api.github.com/repos/GITenberg';
+const RAW  = 'https://raw.githubusercontent.com/GITenberg';
 
-// ── Roman numeral parser ──────────────────────────────────────────────────────
-const ROMAN_MAP = { I:1, V:5, X:10, L:50, C:100, D:500, M:1000 };
-function romanToInt(s) {
-  if (!s) return null;
-  s = s.toUpperCase().trim();
-  let n = 0;
-  for (let i = 0; i < s.length; i++) {
-    const cur = ROMAN_MAP[s[i]], nxt = ROMAN_MAP[s[i+1]];
-    if (!cur) return null;
-    n += (nxt && nxt > cur) ? -cur : cur;
-  }
-  return n > 0 ? n : null;
-}
-
-// Filenames contain patterns like "(Canto_III_-_" or "(Canto_V_-_"
-function cantoFromFilename(title) {
-  const m = title.match(/[_(]Canto[_ ]([IVXLCDM]+)[_) -]/i);
-  return m ? romanToInt(m[1]) : null;
-}
-
-// ── Wikimedia API helpers ─────────────────────────────────────────────────────
-async function apiGet(params) {
-  const url = 'https://commons.wikimedia.org/w/api.php?' +
-    new URLSearchParams({ format:'json', origin:'*', ...params });
-  const res = await fetch(url, { headers:{ 'User-Agent': UA } });
-  if (!res.ok) { console.warn('  HTTP', res.status, url); return null; }
+async function ghJson(path) {
+  const res = await fetch(`${BASE}/${path}`, {
+    headers: { 'User-Agent': 'divecody/1.0', Accept: 'application/vnd.github.v3+json' },
+  });
+  if (!res.ok) return null;
   return res.json();
 }
 
-/** Fetch ALL files from a category, following continuation tokens. */
-async function allCategoryFiles(category) {
-  const files = [];
-  let cmcontinue;
-  do {
-    const params = {
-      action: 'query', list: 'categorymembers',
-      cmtitle: 'Category:' + category,
-      cmtype: 'file', cmlimit: '500',
-      ...(cmcontinue ? { cmcontinue } : {}),
-    };
-    const data = await apiGet(params);
-    if (!data) break;
-    files.push(...(data.query?.categorymembers ?? []).map(m => m.title));
-    cmcontinue = data.continue?.cmcontinue;
-  } while (cmcontinue);
-  return files;
+function rawUrl(repo, imgPath) {
+  return `${RAW}/${repo}/master/${imgPath}`;
 }
 
-/** Get thumb URL for a batch of filenames (up to 50 per API call). */
-async function thumbUrls(titles) {
-  const map = {};
-  for (let i = 0; i < titles.length; i += 50) {
-    const batch = titles.slice(i, i + 50);
-    const data = await apiGet({
-      action: 'query', titles: batch.join('|'),
-      prop: 'imageinfo', iiprop: 'url', iiurlwidth: String(THUMB_W),
-    });
-    for (const page of Object.values(data?.query?.pages ?? {})) {
-      const ii = page.imageinfo?.[0];
-      if (ii?.thumburl) map[page.title] = ii.thumburl;
-      else if (ii?.url)  map[page.title] = ii.url;
-    }
-    if (i + 50 < titles.length) await sleep(200);
-  }
-  return map;
-}
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// ── Per-book config ───────────────────────────────────────────────────────────
-const BOOKS = [
-  {
-    id: 'inferno',
-    cantos: 34,
-    // try multiple category spellings; first non-empty wins
-    categories: [
-      'Gustave_Doré_-_Inferno',
-      'Gustave_Dore_-_Inferno',
-      "Gustave_Dore's_illustrations_to_Dante's_Inferno",
-    ],
-  },
-  {
-    id: 'purgatorio',
-    cantos: 33,
-    categories: [
-      'Gustave_Doré_-_Purgatorio',
-      'Gustave_Dore_-_Purgatorio',
-      'Gustave_Doré_-_Purgatorio_archive',
-      'Illustrations_by_Gustave_Doré_for_Purgatorio',
-    ],
-  },
-  {
-    id: 'paradiso',
-    cantos: 33,
-    categories: [
-      'Gustave_Doré_-_Paradiso',
-      'Gustave_Dore_-_Paradiso',
-      'Gustave_Doré_-_Paradiso_archive',
-      'Illustrations_by_Gustave_Doré_for_Paradiso',
-    ],
-  },
+// Each entry: [repo_name, images_subdir, book_key, filename_pattern]
+// pattern: 'b' = use XX-NNNb.jpg (Inferno/vision-of-hell edition)
+//          ''  = use XX-NNN.jpg excluding th.jpg (Purgatorio/Paradiso editions)
+const REPOS = [
+  // Inferno
+  ['The-vision-of-hell.---13-and-illustrated-with-the-seventy-five-designs-of-Gustave-Dor-._8789',
+   '8789-h/images', 'inferno', 'b'],
+  ...Array.from({length:10}, (_,i) => {
+    const n = String(i+1).padStart(2,'0'), id = 8779+i;
+    return [`The-Divine-Comedy-by-Dante-Illustrated-Hell-Volume-${n}_${id}`,
+            `${id}-h/images`, 'inferno', 'b'];
+  }),
+  // Purgatorio
+  ['The-Divine-Comedy-by-Dante-Illustrated-Purgatory-Complete_8795', '8795-h/images', 'purgatorio', ''],
+  ...['8790','8791','8792','8793','8794'].map((id,i) =>
+    [`The-Divine-Comedy-by-Dante-Illustrated-Purgatory-Volume-${String(i+1).padStart(2,'0')}_${id}`,
+     `${id}-h/images`, 'purgatorio', '']),
+  // Paradiso
+  ['The-Divine-Comedy-by-Dante-Illustrated-Paradise-Complete_8799', '8799-h/images', 'paradiso', ''],
+  ...['8796','8797','8798'].map((id,i) =>
+    [`The-Divine-Comedy-by-Dante-Illustrated-Paradise-Volume-${String(i+1).padStart(2,'0')}_${id}`,
+     `${id}-h/images`, 'paradiso', '']),
 ];
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+const MAX = { inferno: 34, purgatorio: 33, paradiso: 33 };
+
 async function main() {
-  const result = {};
+  const result = { inferno: {}, purgatorio: {}, paradiso: {} };
 
-  for (const book of BOOKS) {
-    console.log(`\n📚  ${book.id}`);
-    result[book.id] = {};
+  for (const [repo, imgDir, book, variant] of REPOS) {
+    const files = await ghJson(`${repo}/contents/${imgDir}`);
+    if (!files) continue;
 
-    // Find the category that has files
-    let allFiles = [];
-    for (const cat of book.categories) {
-      console.log(`  Trying category: ${cat}`);
-      allFiles = await allCategoryFiles(cat);
-      if (allFiles.length) { console.log(`  → ${allFiles.length} files`); break; }
-      await sleep(300);
-    }
+    let added = 0;
+    for (const f of files) {
+      if (f.type !== 'file') continue;
+      const name = f.name;
+      // Skip thumbnails
+      if (name.endsWith('th.jpg')) continue;
 
-    if (!allFiles.length) {
-      console.log('  ⚠️  No files found in any category');
-      continue;
-    }
-
-    // Keep only plausible Doré illustration files
-    const relevant = allFiles.filter(t =>
-      /\.(jpe?g|png)$/i.test(t) &&
-      /(dor[eé]|dore)/i.test(t)
-    );
-    console.log(`  ${relevant.length} Doré files after filter`);
-
-    // Map canto → first matching filename
-    const cantoFile = {};
-    for (const title of relevant) {
-      const n = cantoFromFilename(title);
-      if (n && n >= 1 && n <= book.cantos && !cantoFile[n]) {
-        cantoFile[n] = title;
+      let m;
+      if (variant === 'b') {
+        m = name.match(/^(\d+)-\d+b\.jpg$/);
+      } else {
+        m = name.match(/^(\d+)-\d+\.jpg$/) && !name.endsWith('b.jpg') ? name.match(/^(\d+)-\d+\.jpg$/) : null;
       }
+      if (!m) continue;
+
+      const canto = parseInt(m[1], 10);
+      if (canto < 1 || canto > MAX[book]) continue;
+      if (result[book][canto]) continue;  // already have one
+
+      result[book][canto] = f.download_url;
+      added++;
     }
+    if (added) process.stdout.write(`  +${added} ${book} ← ${repo.split('_')[0].slice(-30)}\n`);
+  }
 
-    const covered = Object.keys(cantoFile).length;
-    console.log(`  ${covered}/${book.cantos} cantos matched`);
+  for (const [book, cantos] of Object.entries(result)) {
+    const total = MAX[book];
+    const found = Object.keys(cantos).length;
+    const missing = Array.from({length:total}, (_,i)=>i+1).filter(n => !cantos[n]);
+    console.log(`${book}: ${found}/${total}${missing.length ? `  missing: ${missing.join(',')}` : '  ✅'}`);
+  }
 
-    // Fetch thumb URLs in batches
-    const urls = await thumbUrls(Object.values(cantoFile));
-    for (const [cantoStr, title] of Object.entries(cantoFile)) {
-      if (urls[title]) result[book.id][cantoStr] = urls[title];
+  // Sort by canto number, write string keys
+  const out = {};
+  for (const [book, cantos] of Object.entries(result)) {
+    out[book] = {};
+    for (const k of Object.keys(cantos).map(Number).sort((a,b)=>a-b)) {
+      out[book][String(k)] = cantos[k];
     }
-
-    // Report missing
-    const found = new Set(Object.keys(result[book.id]).map(Number));
-    const missing = Array.from({length:book.cantos}, (_,i)=>i+1).filter(n=>!found.has(n));
-    if (missing.length) console.log(`  ⚠️  Missing cantos: ${missing.join(', ')}`);
-    else console.log('  ✅  All cantos covered');
   }
 
   mkdirSync(join(root, 'public', 'data'), { recursive: true });
-  writeFileSync(outPath, JSON.stringify(result, null, 2) + '\n');
-  const total = Object.values(result).flatMap(Object.values).length;
-  console.log(`\n🎉  ${total} illustrations saved → ${outPath}`);
+  writeFileSync(outPath, JSON.stringify(out, null, 2) + '\n');
+  const total = Object.values(out).flatMap(Object.values).length;
+  console.log(`\n🎉  ${total} illustrations → ${outPath}`);
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
