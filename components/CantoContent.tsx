@@ -110,12 +110,34 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
     });
   }
 
-  function getUrl() {
-    return typeof window !== 'undefined' ? window.location.href : '';
+  function buildLineNumMap(): Map<number, number> {
+    const map = new Map<number, number>();
+    let num = 0;
+    if (isBilingual) {
+      const len = Math.max(canto.lines.length, cantoEn!.lines.length);
+      for (let i = 0; i < len; i++) {
+        if ((canto.lines[i] ?? '').trim() || (cantoEn!.lines[i] ?? '').trim()) map.set(i, ++num);
+      }
+    } else {
+      canto.lines.forEach((line, idx) => { if (line.trim()) map.set(idx, ++num); });
+    }
+    return map;
+  }
+
+  function positionLabel(lineNums?: number[]): string {
+    if (lang === 'en') {
+      const base = `${book_title}, Canto ${canto.roman}`;
+      if (!lineNums?.length) return base;
+      const lo = Math.min(...lineNums), hi = Math.max(...lineNums);
+      return lo === hi ? `${base}, line ${lo}` : `${base}, lines ${lo}–${hi}`;
+    }
+    const base = `《神曲·${book_title_zh}》${canto.title}`;
+    if (!lineNums?.length) return base;
+    const lo = Math.min(...lineNums), hi = Math.max(...lineNums);
+    return lo === hi ? `${base}，第 ${lo} 行` : `${base}，第 ${lo}—${hi} 行`;
   }
 
   function getTextToCopy() {
-    const url = getUrl();
     if (isBilingual) {
       const header = `但丁《神曲·${book_title_zh}》${canto.title} / ${book_title} Canto ${canto.roman}\n\n`;
       const lines: string[] = [];
@@ -129,17 +151,16 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
         if (first.trim()) lines.push(first.trim());
         if (second.trim()) lines.push(second.trim());
       }
-      return header + lines.join('\n') + `\n\n— ${translator}\n${url}`;
+      return header + lines.join('\n') + `\n\n${positionLabel()}`;
     }
     const bookLabel = lang === 'zh' ? book_title_zh : book_title;
     const title = lang === 'zh'
       ? `但丁《神曲·${bookLabel}》${canto.title}\n`
       : `Dante's Divine Comedy — ${book_title}, Canto ${canto.roman}\n`;
-    return title + canto.lines.join('\n') + `\n\n— ${translator}\n${url}`;
+    return title + canto.lines.join('\n') + `\n\n${positionLabel()}`;
   }
 
   function copySelected() {
-    const url = getUrl();
     const sorted = Array.from(selectedLines).sort((a, b) => a - b);
     const parts: string[] = [];
 
@@ -160,7 +181,9 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
       }
     }
 
-    const text = parts.join('\n').trimEnd() + `\n\n${url}`;
+    const numMap = buildLineNumMap();
+    const lineNums = sorted.map(i => numMap.get(i)).filter((n): n is number => n !== undefined);
+    const text = parts.join('\n').trimEnd() + `\n\n${positionLabel(lineNums)}`;
     navigator.clipboard.writeText(text).catch(() => {
       const ta = document.createElement('textarea');
       ta.value = text;
