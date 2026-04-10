@@ -456,42 +456,40 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
         className="flex-1 overflow-y-auto fade-in canto-scroll"
         onScroll={handleScroll}
       >
-        {/* Doré illustration banner */}
+        {/* Doré illustration — full width, natural height, text starts below */}
         {illustrationUrl && (
           <>
             <div
               role="button"
               aria-label="放大插图"
               onClick={() => setLightboxOpen(true)}
-              style={{ position: 'relative', width: '100%', height: 'clamp(220px, 80vw, 380px)', overflow: 'hidden', flexShrink: 0, backgroundColor: 'var(--bg)', cursor: 'zoom-in', display: 'flex', justifyContent: 'flex-start', paddingLeft: 'max(0px, calc((100% - 680px) / 2))' }}
+              style={{ position: 'relative', width: '100%', cursor: 'zoom-in', backgroundColor: 'var(--bg)', lineHeight: 0 }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={illustrationUrl}
                 alt="Gustave Doré illustration"
                 style={{
-                  height: '100%',
-                  width: 'auto',
-                  objectFit: 'contain',
-                  objectPosition: 'center top',
-                  filter: 'grayscale(45%) brightness(0.70) contrast(1.1)',
+                  width: '100%',
+                  height: 'auto',
                   display: 'block',
+                  filter: 'grayscale(40%) brightness(0.72) contrast(1.1)',
                 }}
               />
+              {/* Gradient fade into page background */}
               <div style={{
                 position: 'absolute',
                 inset: 0,
-                background: 'linear-gradient(to bottom, transparent 0%, color-mix(in srgb, var(--bg) 35%, transparent) 55%, color-mix(in srgb, var(--bg) 92%, transparent) 88%, var(--bg) 100%)',
+                background: 'linear-gradient(to bottom, transparent 55%, color-mix(in srgb, var(--bg) 50%, transparent) 78%, color-mix(in srgb, var(--bg) 95%, transparent) 92%, var(--bg) 100%)',
                 pointerEvents: 'none',
               }} />
-              {/* Faint canto label overlaid at bottom of banner */}
               <div style={{
                 position: 'absolute',
-                bottom: '0.75rem',
+                bottom: '1rem',
                 left: 0,
                 right: 0,
                 textAlign: 'center',
-                color: 'rgba(196,163,90,0.55)',
+                color: 'rgba(196,163,90,0.5)',
                 fontSize: '0.65rem',
                 letterSpacing: '0.18em',
                 textTransform: 'uppercase',
@@ -550,7 +548,7 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
             )}
           </>
         )}
-        <div style={{ maxWidth: '680px', margin: '0 auto', fontSize: `${fontSize}px` }}>
+        <div style={{ maxWidth: '680px', margin: '0 auto', fontSize: `${fontSize}px`, paddingTop: illustrationUrl ? '0.5rem' : '1.5rem' }}>
           {isBilingual ? renderBilingual() : renderMono()}
         </div>
         <div className="pt-6 text-sm text-center" style={{ borderTop: '1px solid var(--border)', color: 'var(--text-muted)', maxWidth: '680px', margin: '3rem auto 0' }}>
