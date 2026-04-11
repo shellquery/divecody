@@ -1,4 +1,4 @@
-export type BookId = 'inferno' | 'purgatorio' | 'paradiso';
+export type BookId = string; // Extensible — not a fixed union
 export type Lang = 'en' | 'zh' | 'bilingual';
 
 export interface Canto {
@@ -9,7 +9,7 @@ export interface Canto {
 }
 
 export interface Book {
-  id: BookId;
+  id: string;
   title: string;
   title_zh: string;
   translator: string;
@@ -19,21 +19,32 @@ export interface Book {
 }
 
 export interface BookMeta {
-  id: BookId;
+  id: string;
   title: string;
   title_zh: string;
   canto_count: number;
   translator: string;
 }
 
-export const BOOKS: { id: BookId; title: string; title_zh: string; emoji: string }[] = [
-  { id: 'inferno',    title: 'Inferno',    title_zh: '地狱篇', emoji: '🔥' },
-  { id: 'purgatorio', title: 'Purgatorio', title_zh: '炼狱篇', emoji: '⛰️' },
-  { id: 'paradiso',   title: 'Paradiso',   title_zh: '天堂篇', emoji: '✨' },
-];
+/** A section/volume within a work (e.g. "Inferno" inside "The Divine Comedy"). */
+export interface Section {
+  id: string;
+  work_id: string;
+  title: string;
+  title_zh: string | null;
+  number: number;
+  canto_count: number;
+  emoji: string | null;
+  zh_placeholder: boolean;
+  translator_en: string | null;
+  translator_zh: string | null;
+}
 
-export const CANTO_COUNTS: Record<BookId, number> = {
-  inferno: 34,
-  purgatorio: 33,
-  paradiso: 33,
-};
+/** A top-level literary work. */
+export interface Work {
+  id: string;
+  title: string;
+  title_zh: string | null;
+  author: string | null;
+  author_zh: string | null;
+}

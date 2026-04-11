@@ -3,22 +3,28 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { BOOKS, CANTO_COUNTS } from '@/lib/types';
-import type { BookId } from '@/lib/types';
+import type { Section } from '@/lib/types';
+
+interface SidebarProps {
+  sections: Section[];
+}
 
 function NavLinks({
+  sections,
   activeBook,
   activeCanto,
-  cantoCount,
   lang,
   onNavigate,
 }: {
-  activeBook: BookId;
+  sections: Section[];
+  activeBook: string;
   activeCanto: number;
-  cantoCount: number;
   lang: string;
   onNavigate?: () => void;
 }) {
+  const activeSection = sections.find((s) => s.id === activeBook);
+  const cantoCount = activeSection?.canto_count ?? 34;
+
   return (
     <>
       <div className="p-3" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -26,12 +32,12 @@ function NavLinks({
           {lang === 'en' ? 'Volume' : '卷'}
         </p>
         <div className="flex flex-col gap-1">
-          {BOOKS.map((book) => {
-            const isActive = book.id === activeBook;
+          {sections.map((section) => {
+            const isActive = section.id === activeBook;
             return (
               <Link
-                key={book.id}
-                href={`/read/${book.id}/1?lang=${lang}`}
+                key={section.id}
+                href={`/read/${section.id}/1?lang=${lang}`}
                 onClick={onNavigate}
                 className="flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors"
                 style={{
@@ -40,8 +46,8 @@ function NavLinks({
                   border: isActive ? '1px solid var(--border-light)' : '1px solid transparent',
                 }}
               >
-                <span>{book.emoji}</span>
-                <span>{lang === 'en' ? book.title : book.title_zh}</span>
+                <span>{section.emoji ?? ''}</span>
+                <span>{lang === 'en' ? section.title : (section.title_zh ?? section.title)}</span>
               </Link>
             );
           })}
@@ -81,7 +87,7 @@ function NavLinks({
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({ sections }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
 
@@ -89,15 +95,15 @@ export default function Sidebar() {
     const saved = localStorage.getItem('sidebarCollapsed');
     if (saved === 'true') setDesktopCollapsed(true);
   }, []);
+
   const params = useParams<{ book: string; canto: string }>();
   const searchParams = useSearchParams();
   const lang = searchParams.get('lang') ?? 'zh';
 
-  const activeBook = params.book as BookId;
+  const activeBook = params.book;
   const activeCanto = parseInt(params.canto ?? '1', 10);
-  const cantoCount = CANTO_COUNTS[activeBook] ?? 34;
 
-  const navProps = { activeBook, activeCanto, cantoCount, lang };
+  const navProps = { sections, activeBook, activeCanto, lang };
 
   return (
     <>
@@ -113,7 +119,6 @@ export default function Sidebar() {
           transition: 'width 0.2s ease, min-width 0.2s ease',
         }}
       >
-        {/* Collapse button */}
         <div
           className="sidebar-header flex items-center justify-between px-3 py-2 shrink-0"
           style={{ borderBottom: '1px solid var(--border)' }}

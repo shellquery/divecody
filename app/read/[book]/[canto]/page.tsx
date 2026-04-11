@@ -1,29 +1,18 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { getCanto, getBookMeta, isZhPlaceholder } from '@/lib/content';
-import { BOOKS, CANTO_COUNTS } from '@/lib/types';
-import type { BookId, Lang } from '@/lib/types';
+import { getCanto, getSection, getAllSections } from '@/lib/content';
+import { getDorehImage } from '@/lib/dore';
+import type { Lang } from '@/lib/types';
 import Sidebar from '@/components/Sidebar';
 import LangToggle from '@/components/LangToggle';
 import CantoContent from '@/components/CantoContent';
 import ThemeToggle from '@/components/ThemeToggle';
 import PageSlider from '@/components/PageSlider';
 import ReadingProgressSaver from '@/components/ReadingProgressSaver';
-import { getDorehImage } from '@/lib/dore';
 
 interface Params { book: string; canto: string }
 interface SearchParams { lang?: string }
-
-export function generateStaticParams() {
-  const params = [];
-  for (const book of BOOKS) {
-    for (let i = 1; i <= CANTO_COUNTS[book.id]; i++) {
-      params.push({ book: book.id, canto: String(i) });
-    }
-  }
-  return params;
-}
 
 export default async function ReadPage({
   params,
@@ -35,50 +24,57 @@ export default async function ReadPage({
   const { book, canto: cantoStr } = await params;
   const { lang: langParam } = await searchParams;
 
-  const bookId = book as BookId;
   const cantoNum = parseInt(cantoStr, 10);
   const lang: Lang =
     langParam === 'en' ? 'en' :
     langParam === 'bilingual' ? 'bilingual' :
     'zh';
 
-  if (!BOOKS.find((b) => b.id === bookId)) notFound();
-  const maxCanto = CANTO_COUNTS[bookId];
-  if (isNaN(cantoNum) || cantoNum < 1 || cantoNum > maxCanto) notFound();
+  // Validate section and get metadata (includes zh_placeholder, canto_count)
+  const section = await getSection(book);
+  if (!section) notFound();
+  if (isNaN(cantoNum) || cantoNum < 1 || cantoNum > section.canto_count) notFound();
 
-  const zhIsPlaceholder = (lang === 'zh' || lang === 'bilingual') && isZhPlaceholder(bookId);
+  const zhIsPlaceholder = (lang === 'zh' || lang === 'bilingual') && section.zh_placeholder;
   const effectiveLang: Lang = zhIsPlaceholder && lang === 'zh' ? 'en' : lang;
-
-  // Primary display language for adjacent panes (bilingual → zh)
   const adjLang: 'en' | 'zh' = effectiveLang === 'en' ? 'en' : 'zh';
 
-  const cantoEn  = getCanto(bookId, cantoNum, 'en');
-  const cantoZh  = getCanto(bookId, cantoNum, 'zh') ?? cantoEn;
-  const meta     = getBookMeta(bookId, 'en');
+  const prevNum = cantoNum > 1 ? cantoNum - 1 : null;
+  const nextNum = cantoNum < section.canto_count ? cantoNum + 1 : null;
+
+  // Parallel fetch: canto text, illustration, sidebar sections, adjacent cantos
+  const [cantoEn, cantoZh, illustrationUrl, allSections, prevCanto, nextCanto] =
+    await Promise.all([
+      getCanto(book, cantoNum, 'en'),
+      getCanto(book, cantoNum, 'zh'),
+      getDorehImage(book, cantoNum),
+      getAllSections(),
+      prevNum ? getCanto(book, prevNum, adjLang) : null,
+      nextNum ? getCanto(book, nextNum, adjLang) : null,
+    ]);
 
   const canto =
-    lang === 'en' ? cantoEn :
+    lang === 'en'        ? cantoEn :
     lang === 'bilingual' ? cantoZh :
-    (zhIsPlaceholder ? cantoEn : cantoZh);
+    zhIsPlaceholder      ? cantoEn : cantoZh;
 
-  if (!canto || !meta || !cantoEn) notFound();
+  if (!canto || !cantoEn) notFound();
 
-  const illustrationUrl = getDorehImage(bookId, cantoNum);
+  const prevHref = prevNum ? `/read/${book}/${prevNum}?lang=${lang}` : undefined;
+  const nextHref = nextNum ? `/read/${book}/${nextNum}?lang=${lang}` : undefined;
 
-  // Adjacent cantos for swipe preview
-  const prevNum = cantoNum > 1 ? cantoNum - 1 : null;
-  const nextNum = cantoNum < maxCanto ? cantoNum + 1 : null;
-  const prevCanto = prevNum ? (getCanto(bookId, prevNum, adjLang) ?? getCanto(bookId, prevNum, 'en') ?? undefined) : undefined;
-  const nextCanto = nextNum ? (getCanto(bookId, nextNum, adjLang) ?? getCanto(bookId, nextNum, 'en') ?? undefined) : undefined;
-
-  const prevHref = prevNum ? `/read/${bookId}/${prevNum}?lang=${lang}` : undefined;
-  const nextHref = nextNum ? `/read/${bookId}/${nextNum}?lang=${lang}` : undefined;
+  const translatorEn = section.translator_en ?? 'Henry Wadsworth Longfellow (1867)';
+  const translatorZh = section.translator_zh ?? translatorEn;
 
   return (
     <div className="flex h-full" style={{ background: 'var(--bg)' }}>
       <Suspense fallback={null}><ReadingProgressSaver /></Suspense>
-      <Suspense fallback={<div className="hidden md:block" style={{ width: 220, background: 'var(--bg-surface)' }} />}>
-        <Sidebar />
+      <Suspense
+        fallback={
+          <div className="hidden md:block" style={{ width: 220, background: 'var(--bg-surface)' }} />
+        }
+      >
+        <Sidebar sections={allSections} />
       </Suspense>
 
       <div className="flex flex-col flex-1 min-w-0 h-full">
@@ -128,28 +124,28 @@ export default async function ReadPage({
           </div>
         </header>
 
-        {/* Reading area — PageSlider handles swipe, wraps CantoContent */}
+        {/* Reading area */}
         <PageSlider
-          prevCanto={prevCanto}
-          nextCanto={nextCanto}
+          prevCanto={prevCanto ?? undefined}
+          nextCanto={nextCanto ?? undefined}
           prevHref={prevHref}
           nextHref={nextHref}
           lang={adjLang}
-          bookTitle={meta.title}
-          bookTitleZh={meta.title_zh}
+          bookTitle={section.title}
+          bookTitleZh={section.title_zh ?? section.title}
         >
           <CantoContent
-            canto={canto!}
-            cantoEn={effectiveLang === 'bilingual' ? cantoEn! : undefined}
-            book_title={meta.title}
-            book_title_zh={meta.title_zh}
+            canto={canto}
+            cantoEn={effectiveLang === 'bilingual' ? cantoEn : undefined}
+            book_title={section.title}
+            book_title_zh={section.title_zh ?? section.title}
             lang={effectiveLang}
             translator={
               effectiveLang === 'en'
-                ? 'Henry Wadsworth Longfellow (1867) · 英文版'
+                ? `${translatorEn} · 英文版`
                 : effectiveLang === 'bilingual'
-                ? `${meta.translator}  ·  Henry Wadsworth Longfellow (1867)`
-                : meta.translator
+                ? `${translatorZh}  ·  ${translatorEn}`
+                : translatorZh
             }
             illustrationUrl={illustrationUrl}
           />
