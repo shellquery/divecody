@@ -1,8 +1,21 @@
-import type { BookId } from './types';
-import doreRaw from '../public/data/dore.json';
+import { db } from '@/db';
+import { illustrations } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 
-const images = doreRaw as Record<string, Record<string, string>>;
+export async function getDorehImage(
+  book: string,
+  canto: number,
+): Promise<string | undefined> {
+  const rows = await db
+    .select({ url: illustrations.url })
+    .from(illustrations)
+    .where(
+      and(
+        eq(illustrations.section_id, book),
+        eq(illustrations.canto_number, canto),
+      ),
+    )
+    .limit(1);
 
-export function getDorehImage(book: BookId, canto: number): string | undefined {
-  return images[book]?.[String(canto)];
+  return rows[0]?.url;
 }

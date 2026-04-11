@@ -1,54 +1,124 @@
-import fs from 'fs';
-import path from 'path';
-import type { Book, BookId, Canto, Lang } from './types';
+import { db } from '@/db';
+import { sections, cantos } from '@/db/schema';
+import { eq, and, asc } from 'drizzle-orm';
+import type { Canto, Section } from './types';
 
-const DATA_DIR = path.join(process.cwd(), 'data', 'parsed');
-
-interface BookData extends Book {
-  _placeholder?: boolean;
+export async function getAllSections(): Promise<Section[]> {
+  return db
+    .select({
+      id: sections.id,
+      work_id: sections.work_id,
+      title: sections.title,
+      title_zh: sections.title_zh,
+      number: sections.number,
+      canto_count: sections.canto_count,
+      emoji: sections.emoji,
+      zh_placeholder: sections.zh_placeholder,
+      translator_en: sections.translator_en,
+      translator_zh: sections.translator_zh,
+    })
+    .from(sections)
+    .orderBy(asc(sections.work_id), asc(sections.number));
 }
 
-function loadBook(bookId: BookId, lang: Lang): BookData | null {
-  const filePath = path.join(DATA_DIR, `${bookId}_${lang}.json`);
-  try {
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(raw) as BookData;
-  } catch {
-    return null;
-  }
+export async function getSection(bookId: string): Promise<Section | null> {
+  const rows = await db
+    .select({
+      id: sections.id,
+      work_id: sections.work_id,
+      title: sections.title,
+      title_zh: sections.title_zh,
+      number: sections.number,
+      canto_count: sections.canto_count,
+      emoji: sections.emoji,
+      zh_placeholder: sections.zh_placeholder,
+      translator_en: sections.translator_en,
+      translator_zh: sections.translator_zh,
+    })
+    .from(sections)
+    .where(eq(sections.id, bookId))
+    .limit(1);
+
+  return rows[0] ?? null;
 }
 
-/** Returns whether the zh file is just a placeholder (not yet translated) */
-export function isZhPlaceholder(bookId: BookId): boolean {
-  const book = loadBook(bookId, 'zh');
-  return book?._placeholder === true;
+export async function isZhPlaceholder(bookId: string): Promise<boolean> {
+  const rows = await db
+    .select({ zh_placeholder: sections.zh_placeholder })
+    .from(sections)
+    .where(eq(sections.id, bookId))
+    .limit(1);
+
+  return rows[0]?.zh_placeholder ?? false;
 }
 
-export function getBook(bookId: BookId, lang: Lang): Book | null {
-  return loadBook(bookId, lang);
-}
+export async function getCanto(
+  bookId: string,
+  cantoNum: number,
+  lang: 'en' | 'zh',
+): Promise<Canto | null> {
+  const rows = await db
+    .select({
+      number: cantos.number,
+      roman: cantos.roman,
+      title_en: cantos.title_en,
+      title_zh: cantos.title_zh,
+      lines_en: cantos.lines_en,
+      lines_zh: cantos.lines_zh,
+    })
+    .from(cantos)
+    .where(and(eq(cantos.section_id, bookId), eq(cantos.number, cantoNum)))
+    .limit(1);
 
-export function getCanto(bookId: BookId, cantoNum: number, lang: Lang): Canto | null {
-  const book = loadBook(bookId, lang);
-  if (!book) return null;
-  return book.cantos.find((c) => c.number === cantoNum) ?? null;
-}
+  const row = rows[0];
+  if (!row) return null;
 
-export function getBookMeta(bookId: BookId, lang: Lang) {
-  const book = loadBook(bookId, lang);
-  if (!book) return null;
+  const lines =
+    lang === 'zh'
+      ? ((row.lines_zh ?? row.lines_en) as string[])
+      : (row.lines_en as string[]);
+
   return {
-    id: book.id,
-    title: book.title,
-    title_zh: book.title_zh,
-    translator: book.translator,
-    canto_count: book.cantos.length,
-    isPlaceholder: (book as BookData)._placeholder === true,
+    number: row.number,
+    roman: row.roman,
+    title:
+      lang === 'zh'
+        ? (row.title_zh ?? row.title_en ?? '')
+        : (row.title_en ?? ''),
+    lines,
   };
 }
 
-export function listCantos(bookId: BookId, lang: Lang): Pick<Canto, 'number' | 'roman' | 'title'>[] {
-  const book = loadBook(bookId, lang);
-  if (!book) return [];
-  return book.cantos.map(({ number, roman, title }) => ({ number, roman, title }));
+export async function getBookMeta(bookId: string) {
+  const section = await getSection(bookId);
+  if (!section) return null;
+  return {
+    id: section.id,
+    title: section.title,
+    title_zh: section.title_zh ?? '',
+    canto_count: section.canto_count,
+    translator: section.translator_zh ?? section.translator_en ?? '',
+    translator_en: section.translator_en ?? '',
+  };
+}
+
+export async function listCantos(
+  bookId: string,
+): Promise<Pick<Canto, 'number' | 'roman' | 'title'>[]> {
+  const rows = await db
+    .select({
+      number: cantos.number,
+      roman: cantos.roman,
+      title_zh: cantos.title_zh,
+      title_en: cantos.title_en,
+    })
+    .from(cantos)
+    .where(eq(cantos.section_id, bookId))
+    .orderBy(asc(cantos.number));
+
+  return rows.map((r) => ({
+    number: r.number,
+    roman: r.roman,
+    title: r.title_zh ?? r.title_en ?? '',
+  }));
 }
