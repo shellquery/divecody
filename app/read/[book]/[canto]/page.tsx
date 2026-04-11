@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { getCanto, getSection, getAllSections, getWork } from '@/lib/content';
+import { getCanto, getSection, getAllWorks } from '@/lib/content';
 import { getDorehImage } from '@/lib/dore';
 import type { Lang } from '@/lib/types';
 import Sidebar from '@/components/Sidebar';
@@ -30,7 +30,6 @@ export default async function ReadPage({
     langParam === 'bilingual' ? 'bilingual' :
     'zh';
 
-  // Validate section and get metadata (includes zh_placeholder, canto_count)
   const section = await getSection(book);
   if (!section) notFound();
   if (isNaN(cantoNum) || cantoNum < 1 || cantoNum > section.canto_count) notFound();
@@ -42,17 +41,18 @@ export default async function ReadPage({
   const prevNum = cantoNum > 1 ? cantoNum - 1 : null;
   const nextNum = cantoNum < section.canto_count ? cantoNum + 1 : null;
 
-  // Parallel fetch: canto text, illustration, sidebar sections, adjacent cantos
-  const [cantoEn, cantoZh, illustrationUrl, allSections, prevCanto, nextCanto, work] =
+  const [cantoEn, cantoZh, illustrationUrl, allWorks, prevCanto, nextCanto] =
     await Promise.all([
       getCanto(book, cantoNum, 'en'),
       getCanto(book, cantoNum, 'zh'),
       getDorehImage(book, cantoNum),
-      getAllSections(),
+      getAllWorks(),
       prevNum ? getCanto(book, prevNum, adjLang) : null,
       nextNum ? getCanto(book, nextNum, adjLang) : null,
-      getWork(section.work_id),
     ]);
+
+  const allSections = allWorks.flatMap((w) => w.sections);
+  const work = allWorks.find((w) => w.id === section.work_id);
 
   const canto =
     lang === 'en'        ? cantoEn :
@@ -75,7 +75,7 @@ export default async function ReadPage({
           <div className="hidden md:block" style={{ width: 220, background: 'var(--bg-surface)' }} />
         }
       >
-        <Sidebar sections={allSections} />
+        <Sidebar sections={allSections} works={allWorks} />
       </Suspense>
 
       <div className="flex flex-col flex-1 min-w-0 h-full">

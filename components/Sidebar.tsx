@@ -1,22 +1,113 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import type { Section } from '@/lib/types';
+import type { WorkWithSections } from '@/lib/content';
 
 interface SidebarProps {
   sections: Section[];
+  works: WorkWithSections[];
+}
+
+function WorkSwitcher({
+  works,
+  activeWorkId,
+  lang,
+  onNavigate,
+}: {
+  works: WorkWithSections[];
+  activeWorkId: string;
+  lang: string;
+  onNavigate?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const activeWork = works.find((w) => w.id === activeWorkId);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors hover:bg-[var(--bg-hover)]"
+      >
+        <span
+          className="text-sm font-medium truncate"
+          style={{ color: 'var(--accent)', fontFamily: 'Georgia, serif' }}
+        >
+          {lang === 'zh'
+            ? (activeWork?.title_zh ?? activeWork?.title)
+            : activeWork?.title}
+        </span>
+        <span className="ml-2 shrink-0 text-xs" style={{ color: 'var(--text-muted)' }}>
+          {open ? '▲' : '▼'}
+        </span>
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 right-0 z-50 flex flex-col"
+          style={{
+            top: '100%',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+            borderTop: 'none',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          }}
+        >
+          {works.map((work) => {
+            const isActive = work.id === activeWorkId;
+            const firstSection = work.sections[0];
+            const totalChapters = work.sections.reduce((n, s) => n + s.canto_count, 0);
+            return (
+              <Link
+                key={work.id}
+                href={firstSection ? `/read/${firstSection.id}/1?lang=${lang}` : '/'}
+                onClick={() => { setOpen(false); onNavigate?.(); }}
+                className="flex flex-col px-4 py-3 transition-colors hover:bg-[var(--bg-hover)]"
+                style={{
+                  borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+                  background: isActive ? 'var(--bg-active)' : 'transparent',
+                }}
+              >
+                <span className="text-sm" style={{ color: isActive ? 'var(--accent)' : 'var(--text-primary)' }}>
+                  {lang === 'zh' ? (work.title_zh ?? work.title) : work.title}
+                </span>
+                <span className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  {work.sections.map((s) => s.emoji).filter(Boolean).join(' ')}
+                  {' · '}
+                  {totalChapters} 章
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function NavLinks({
   sections,
+  works,
   activeBook,
   activeCanto,
   lang,
   onNavigate,
 }: {
   sections: Section[];
+  works: WorkWithSections[];
   activeBook: string;
   activeCanto: number;
   lang: string;
@@ -24,26 +115,17 @@ function NavLinks({
 }) {
   const activeSection = sections.find((s) => s.id === activeBook);
   const cantoCount = activeSection?.canto_count ?? 34;
+  const activeWorkId = activeSection?.work_id ?? '';
 
-  // Only show sections belonging to the same work as the active section
+  // Only show sections from the current work
   const workSections = activeSection
     ? sections.filter((s) => s.work_id === activeSection.work_id)
     : sections;
 
   return (
     <>
-      {/* Library link */}
-      <div className="px-3 pt-2 pb-1" style={{ borderBottom: '1px solid var(--border)' }}>
-        <Link
-          href="/"
-          onClick={onNavigate}
-          className="flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors hover:bg-[var(--bg-hover)]"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          <span>⊞</span>
-          <span>{lang === 'en' ? 'Library' : '书库'}</span>
-        </Link>
-      </div>
+      {/* Book switcher */}
+      <WorkSwitcher works={works} activeWorkId={activeWorkId} lang={lang} onNavigate={onNavigate} />
 
       <div className="p-3" style={{ borderBottom: '1px solid var(--border)' }}>
         <p className="text-xs mb-2 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
@@ -105,7 +187,7 @@ function NavLinks({
   );
 }
 
-export default function Sidebar({ sections }: SidebarProps) {
+export default function Sidebar({ sections, works }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
 
@@ -122,7 +204,7 @@ export default function Sidebar({ sections }: SidebarProps) {
   const activeCanto = parseInt(params.canto ?? '1', 10);
   const activeSection = sections.find((s) => s.id === activeBook);
 
-  const navProps = { sections, activeBook, activeCanto, lang };
+  const navProps = { sections, works, activeBook, activeCanto, lang };
 
   return (
     <>
