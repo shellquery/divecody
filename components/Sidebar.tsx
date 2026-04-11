@@ -25,14 +25,32 @@ function NavLinks({
   const activeSection = sections.find((s) => s.id === activeBook);
   const cantoCount = activeSection?.canto_count ?? 34;
 
+  // Only show sections belonging to the same work as the active section
+  const workSections = activeSection
+    ? sections.filter((s) => s.work_id === activeSection.work_id)
+    : sections;
+
   return (
     <>
+      {/* Library link */}
+      <div className="px-3 pt-2 pb-1" style={{ borderBottom: '1px solid var(--border)' }}>
+        <Link
+          href="/"
+          onClick={onNavigate}
+          className="flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors hover:bg-[var(--bg-hover)]"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <span>⊞</span>
+          <span>{lang === 'en' ? 'Library' : '书库'}</span>
+        </Link>
+      </div>
+
       <div className="p-3" style={{ borderBottom: '1px solid var(--border)' }}>
         <p className="text-xs mb-2 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
           {lang === 'en' ? 'Volume' : '卷'}
         </p>
         <div className="flex flex-col gap-1">
-          {sections.map((section) => {
+          {workSections.map((section) => {
             const isActive = section.id === activeBook;
             return (
               <Link
@@ -102,6 +120,7 @@ export default function Sidebar({ sections }: SidebarProps) {
 
   const activeBook = params.book;
   const activeCanto = parseInt(params.canto ?? '1', 10);
+  const activeSection = sections.find((s) => s.id === activeBook);
 
   const navProps = { sections, activeBook, activeCanto, lang };
 
@@ -204,7 +223,7 @@ export default function Sidebar({ sections }: SidebarProps) {
           style={{ borderBottom: '1px solid var(--border)' }}
         >
           <span style={{ color: 'var(--accent)', fontFamily: 'Georgia, serif', fontSize: '0.9rem' }}>
-            神曲 · Divine Comedy
+            {activeSection?.title_zh ?? activeSection?.title ?? 'DiveCody'}
           </span>
           <button
             onClick={() => setMobileOpen(false)}

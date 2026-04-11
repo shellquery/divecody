@@ -1,7 +1,34 @@
 import { db } from '@/db';
-import { sections, cantos } from '@/db/schema';
+import { works, sections, cantos } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
-import type { Canto, Section } from './types';
+import type { Canto, Section, Work } from './types';
+
+export interface WorkWithSections extends Work {
+  sections: Section[];
+}
+
+export async function getAllWorks(): Promise<WorkWithSections[]> {
+  const [workRows, sectionRows] = await Promise.all([
+    db.select().from(works).orderBy(asc(works.id)),
+    db.select({
+      id: sections.id,
+      work_id: sections.work_id,
+      title: sections.title,
+      title_zh: sections.title_zh,
+      number: sections.number,
+      canto_count: sections.canto_count,
+      emoji: sections.emoji,
+      zh_placeholder: sections.zh_placeholder,
+      translator_en: sections.translator_en,
+      translator_zh: sections.translator_zh,
+    }).from(sections).orderBy(asc(sections.work_id), asc(sections.number)),
+  ]);
+
+  return workRows.map((w) => ({
+    ...w,
+    sections: sectionRows.filter((s) => s.work_id === w.id),
+  }));
+}
 
 export async function getAllSections(): Promise<Section[]> {
   return db
