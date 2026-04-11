@@ -9,6 +9,9 @@ interface Props {
   cantoEn?: Canto;
   book_title: string;
   book_title_zh: string;
+  work_title?: string;
+  work_title_zh?: string;
+  work_author?: string;
   lang: Lang;
   translator: string;
   illustrationUrl?: string;
@@ -52,7 +55,7 @@ function SwapIcon() {
   );
 }
 
-export default function CantoContent({ canto, cantoEn, book_title, book_title_zh, lang, translator, illustrationUrl }: Props) {
+export default function CantoContent({ canto, cantoEn, book_title, book_title_zh, work_title, work_title_zh, work_author, lang, translator, illustrationUrl }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
   const [biOrder, setBiOrder] = useState<'zh' | 'en'>('zh');
@@ -192,21 +195,26 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
   }
 
   function positionLabel(lineNums?: number[]): string {
+    const chapterLabel = canto.title || `Canto ${canto.roman}`;
     if (lang === 'en') {
-      const base = `${book_title}, Canto ${canto.roman}`;
+      const base = `${work_title ? `${work_title} — ` : ''}${book_title}, ${chapterLabel}`;
       if (!lineNums?.length) return base;
       const lo = Math.min(...lineNums), hi = Math.max(...lineNums);
       return lo === hi ? `${base}, line ${lo}` : `${base}, lines ${lo}–${hi}`;
     }
-    const base = `《神曲·${book_title_zh}》${canto.title}`;
+    const wt = work_title_zh ? `《${work_title_zh}·${book_title_zh}》` : `《${book_title_zh}》`;
+    const base = `${wt}${chapterLabel}`;
     if (!lineNums?.length) return base;
     const lo = Math.min(...lineNums), hi = Math.max(...lineNums);
     return lo === hi ? `${base}，第 ${lo} 行` : `${base}，第 ${lo}—${hi} 行`;
   }
 
   function getTextToCopy() {
+    const chapterLabel = canto.title || `Canto ${canto.roman}`;
+    const enChapterLabel = cantoEn?.title || `Canto ${canto.roman}`;
     if (isBilingual) {
-      const header = `但丁《神曲·${book_title_zh}》${canto.title} / ${book_title} Canto ${canto.roman}\n\n`;
+      const wt = work_title_zh ? `《${work_title_zh}·${book_title_zh}》` : `《${book_title_zh}》`;
+      const header = `${wt}${chapterLabel} / ${book_title} — ${enChapterLabel}\n\n`;
       const lines: string[] = [];
       const len = Math.max(canto.lines.length, cantoEn!.lines.length);
       for (let i = 0; i < len; i++) {
@@ -220,11 +228,11 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
       }
       return header + lines.join('\n') + `\n\n${positionLabel()}`;
     }
-    const bookLabel = lang === 'zh' ? book_title_zh : book_title;
-    const title = lang === 'zh'
-      ? `但丁《神曲·${bookLabel}》${canto.title}\n`
-      : `Dante's Divine Comedy — ${book_title}, Canto ${canto.roman}\n`;
-    return title + canto.lines.join('\n') + `\n\n${positionLabel()}`;
+    const authorPrefix = work_author ? `${work_author} — ` : '';
+    const titleLine = lang === 'zh'
+      ? `${work_title_zh ? `《${work_title_zh}·${book_title_zh}》` : `《${book_title_zh}》`}${chapterLabel}\n`
+      : `${authorPrefix}${book_title} — ${chapterLabel}\n`;
+    return titleLine + canto.lines.join('\n') + `\n\n${positionLabel()}`;
   }
 
   function copySelected() {
@@ -402,10 +410,10 @@ export default function CantoContent({ canto, cantoEn, book_title, book_title_zh
             {lang === 'en' ? book_title : book_title_zh}
           </p>
           <h2 className="text-lg md:text-xl font-medium" style={{ color: 'var(--text-primary)' }}>
-            {lang === 'en' ? `Canto ${canto.roman}` : canto.title}
-            {isBilingual && (
+            {canto.title || `Canto ${canto.roman}`}
+            {isBilingual && cantoEn && cantoEn.title !== canto.title && (
               <span className="text-base font-normal ml-3" style={{ color: 'var(--text-muted)' }}>
-                · Canto {canto.roman}
+                · {cantoEn.title || `Canto ${canto.roman}`}
               </span>
             )}
           </h2>

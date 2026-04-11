@@ -30,6 +30,11 @@ export async function getAllWorks(): Promise<WorkWithSections[]> {
   }));
 }
 
+export async function getWork(workId: string): Promise<Work | null> {
+  const rows = await db.select().from(works).where(eq(works.id, workId)).limit(1);
+  return rows[0] ?? null;
+}
+
 export async function getAllSections(): Promise<Section[]> {
   return db
     .select({

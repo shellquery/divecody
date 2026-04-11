@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { getCanto, getSection, getAllSections } from '@/lib/content';
+import { getCanto, getSection, getAllSections, getWork } from '@/lib/content';
 import { getDorehImage } from '@/lib/dore';
 import type { Lang } from '@/lib/types';
 import Sidebar from '@/components/Sidebar';
@@ -43,7 +43,7 @@ export default async function ReadPage({
   const nextNum = cantoNum < section.canto_count ? cantoNum + 1 : null;
 
   // Parallel fetch: canto text, illustration, sidebar sections, adjacent cantos
-  const [cantoEn, cantoZh, illustrationUrl, allSections, prevCanto, nextCanto] =
+  const [cantoEn, cantoZh, illustrationUrl, allSections, prevCanto, nextCanto, work] =
     await Promise.all([
       getCanto(book, cantoNum, 'en'),
       getCanto(book, cantoNum, 'zh'),
@@ -51,6 +51,7 @@ export default async function ReadPage({
       getAllSections(),
       prevNum ? getCanto(book, prevNum, adjLang) : null,
       nextNum ? getCanto(book, nextNum, adjLang) : null,
+      getWork(section.work_id),
     ]);
 
   const canto =
@@ -85,11 +86,11 @@ export default async function ReadPage({
         >
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
             <h1 className="text-sm md:text-base font-medium tracking-wide truncate" style={{ color: 'var(--accent)' }}>
-              神曲<span className="hidden sm:inline"> · Divine Comedy</span>
+              {lang === 'zh' ? (work?.title_zh ?? work?.title) : work?.title}
             </h1>
             <span className="hidden md:inline" style={{ color: 'var(--border-light)' }}>|</span>
             <span className="hidden md:inline text-sm" style={{ color: 'var(--text-secondary)' }}>
-              {lang === 'en' ? 'Dante Alighieri' : '但丁 · 阿利吉耶里'}
+              {lang === 'zh' ? (work?.author_zh ?? work?.author) : work?.author}
             </span>
           </div>
 
@@ -139,6 +140,9 @@ export default async function ReadPage({
             cantoEn={effectiveLang === 'bilingual' ? cantoEn : undefined}
             book_title={section.title}
             book_title_zh={section.title_zh ?? section.title}
+            work_title={work?.title}
+            work_title_zh={work?.title_zh ?? work?.title ?? undefined}
+            work_author={lang === 'zh' ? (work?.author_zh ?? work?.author ?? undefined) : (work?.author ?? undefined)}
             lang={effectiveLang}
             translator={
               effectiveLang === 'en'
