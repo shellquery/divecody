@@ -17,6 +17,7 @@
     "db:seed": "tsx --env-file=.env.local scripts/seed-db.ts",
     "db:seed-mc": "tsx --env-file=.env.local scripts/seed-mere-christianity.ts",
     "db:translate-mc": "tsx --env-file=.env.local scripts/translate-mere-christianity.ts",
+    "export-pdf": "tsx --env-file=.env.local scripts/export-pdf.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
